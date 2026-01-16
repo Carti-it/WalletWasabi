@@ -159,9 +159,9 @@ try {
     mkdir -p "Tor/osx64/"
     Copy-item -Recurse -Force -Path "TorBrowser/macOS/Tor Browser Alpha/Tor Browser Alpha.app/Contents/MacOS/Tor/*" -Destination "Tor/osx64/" -Exclude "PluggableTransports"
 
-    Write-Output "# Extract Tor binary for linux (aarch64)."
-    mkdir -p "Tor/lin_aarch64/"
-    Copy-item -Recurse -Force -Path "TorBrowser/linux_arm64/tor-browser/Browser/TorBrowser/Tor/*" -Destination "Tor/lin_aarch64/" -Exclude "PluggableTransports"
+    Write-Output "# Extract Tor binary for linux (arm64)."
+    mkdir -p "Tor/linux_arm64/"
+    Copy-item -Recurse -Force -Path "TorBrowser/linux_arm64/tor-browser/Browser/TorBrowser/Tor/*" -Destination "Tor/linux_arm64/" -Exclude "PluggableTransports"
 
     Write-Output "# Extract Tor binary for linux (x86_64)."
     mkdir -p "Tor/lin64/"
