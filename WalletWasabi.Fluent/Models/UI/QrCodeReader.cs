@@ -49,20 +49,19 @@ public partial class QrCodeReader : IQrCodeReader
 					Logger.LogTrace($"Found device: {item.d.Name} with characteristic: {item.c}");
 				}
 
-				var descriptor0 = devicesAndCharacteristics.FirstOrDefault()
+				var pair0 = devicesAndCharacteristics.FirstOrDefault()
 					?? throw new InvalidOperationException("Could not find a device.");
 
-				await using var device = await descriptor0.d
-					.OpenAsync(
-						descriptor0.c,
-						ct: cancellationToken,
-						pixelBufferArrived: scope =>
-						{
-							var decoded = Decode(scope);
-							var bitmap = new Bitmap(scope.Buffer.ReferImage().AsStream());
+				using var device = await pair0.d.OpenAsync(
+					pair0.c,
+					ct: cancellationToken,
+					pixelBufferArrived: scope =>
+					{
+						var decoded = Decode(scope);
+						var bitmap = new Bitmap(scope.Buffer.ReferImage().AsStream());
 
-							result.OnNext((decoded, bitmap));
-						});
+						result.OnNext((decoded, bitmap));
+					});
 
 				var tcs = new TaskCompletionSource<object?>();
 				cancellationToken.Register(() => tcs.TrySetResult(default));
