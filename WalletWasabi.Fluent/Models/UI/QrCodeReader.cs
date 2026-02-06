@@ -73,6 +73,9 @@ public partial class QrCodeReader : IQrCodeReader
 
 				// Wait until cancellation is requested.
 				await tcs.Task.ConfigureAwait(false);
+
+				// Stop capturing.
+				await capture.StopAsync(cancellationToken).ConfigureAwait(false);
 			});
 	}
 
