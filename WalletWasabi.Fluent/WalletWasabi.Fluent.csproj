@@ -33,7 +33,6 @@
 		<PackageReference Include="DynamicData" />
 		<PackageReference Include="Markdown.Avalonia" />
 		<PackageReference Include="FlashCap" />
-		<PackageReference Include="SkiaSharp" />
 		<PackageReference Include="ZXing.Net" />
 	</ItemGroup>
 
