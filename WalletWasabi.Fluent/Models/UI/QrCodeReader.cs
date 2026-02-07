@@ -89,17 +89,37 @@ public partial class QrCodeReader : IQrCodeReader
 					tcs.TrySetResult(default);
 				});
 
+				if (!Dispatcher.UIThread.CheckAccess())
+				{
+					throw new NotSupportedException("#1");
+				}
+
 				// Start capturing.
 				await device.StartAsync(cancellationToken);
 				Console.WriteLine("Started");
+
+				if (!Dispatcher.UIThread.CheckAccess())
+				{
+					throw new NotSupportedException("#2");
+				}
 
 				// Wait until cancellation is requested.
 				await tcs.Task;
 				Console.WriteLine("Canceled");
 
+				if (!Dispatcher.UIThread.CheckAccess())
+				{
+					throw new NotSupportedException("#3");
+				}
+
 				// Stop capturing.
 				await device.StopAsync(cancellationToken);
 				Console.WriteLine("Stopped");
+
+				if (!Dispatcher.UIThread.CheckAccess())
+				{
+					throw new NotSupportedException("#4");
+				}
 			});
 	}
 
