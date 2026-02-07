@@ -1,18 +1,20 @@
+using Avalonia.Controls.Primitives;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using FlashCap;
-using FlashCap.Utilities;
 using FlashCap.Devices;
+using FlashCap.Utilities;
+using SkiaSharp;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
-using ZXing.QrCode;
-using SkiaSharp;
 using System.Threading;
 using System.Threading.Tasks;
-using ZXing.SkiaSharp;
-using ZXing.Common;
-using ZXing;
 using WalletWasabi.Logging;
+using ZXing;
+using ZXing.Common;
+using ZXing.QrCode;
+using ZXing.SkiaSharp;
 
 namespace WalletWasabi.Fluent.Models.UI;
 
@@ -37,7 +39,15 @@ public partial class QrCodeReader : IQrCodeReader
 		return Observable.Create(
 			async (IObserver<(string, Bitmap)> result, CancellationToken cancellationToken) =>
 			{
+				if (!Dispatcher.UIThread.CheckAccess())
+				{
+					throw new NotSupportedException("This method must be called on the UI thread.");
+				}
+
+				Console.WriteLine("Get capture devices");
 				var devices = new CaptureDevices();
+
+				Console.WriteLine("Enumerate descriptors");
 				var devicesAndCharacteristics = devices
 					.EnumerateDescriptors()
 					.Where(static d => d is not VideoForWindowsDeviceDescriptor)
@@ -52,11 +62,20 @@ public partial class QrCodeReader : IQrCodeReader
 				var pair0 = devicesAndCharacteristics.FirstOrDefault()
 					?? throw new InvalidOperationException("Could not find a device.");
 
+				int i = 0;
+
+				Console.WriteLine("OpenAsync");
 				using var device = await pair0.d.OpenAsync(
 					pair0.c,
 					ct: cancellationToken,
 					pixelBufferArrived: scope =>
 					{
+						i++;
+						if (i % 10 == 0)
+						{
+							Console.WriteLine("Decode");
+						}
+
 						var decoded = Decode(scope);
 						var bitmap = new Bitmap(scope.Buffer.ReferImage().AsStream());
 
@@ -64,16 +83,23 @@ public partial class QrCodeReader : IQrCodeReader
 					});
 
 				var tcs = new TaskCompletionSource<object?>();
-				cancellationToken.Register(() => tcs.TrySetResult(default));
+				cancellationToken.Register(() =>
+				{
+					Console.WriteLine("Cancellation token SET");
+					tcs.TrySetResult(default);
+				});
 
 				// Start capturing.
 				await device.StartAsync(cancellationToken);
+				Console.WriteLine("Started");
 
 				// Wait until cancellation is requested.
 				await tcs.Task;
+				Console.WriteLine("Canceled");
 
 				// Stop capturing.
 				await device.StopAsync(cancellationToken);
+				Console.WriteLine("Stopped");
 			});
 	}
 
