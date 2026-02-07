@@ -146,8 +146,8 @@
       },
       "FlashCap.Core": {
         "type": "Transitive",
-        "resolved": "1.11.0",
-        "contentHash": "vEEUwQmpITV2iBgRU+YYl+Dr+Tm/1T/nXfnSLyLQSbBIWMlF/NO22OqU4ysfSNEb9TN6w+QK0bqGFMmnN13+Ag=="
+        "resolved": "1.11.5",
+        "contentHash": "jnsV3QXfvXyo1gdjtli3Y/GNP/NwABddRPlhTlMJ6GYQDW7pnY5GpbOYDM2h6m0lRMLtHEWES9q7fEjzaug7AQ=="
       },
       "HarfBuzzSharp": {
         "type": "Transitive",
@@ -590,7 +590,7 @@
           "Avalonia.Skia": "[11.3.11, )",
           "Avalonia.Themes.Fluent": "[11.3.11, )",
           "DynamicData": "[9.4.1, )",
-          "FlashCap": "[1.11.0, )",
+          "FlashCap": "[1.11.5, )",
           "Markdown.Avalonia": "[11.0.3-a1, )",
           "ReactiveUI.Avalonia": "[11.3.8, )",
           "SkiaSharp": "[3.119.2, )",
@@ -675,11 +675,11 @@
       },
       "FlashCap": {
         "type": "CentralTransitive",
-        "requested": "[1.11.0, )",
-        "resolved": "1.11.0",
-        "contentHash": "XwH9DHLKGUTciHat2D7GgsUegAOErJAyZHX+3H5gHX70Ipds7Zv2/q3T9/f0KkIh2A5P6WCg+lFwVxMgLERCKA==",
+        "requested": "[1.11.5, )",
+        "resolved": "1.11.5",
+        "contentHash": "Y2A3/TDjOTIoFrBN2JZ3wFpxT8FPHmtPMcNgUGOcfoB9iseoUh4Holk4roI6s7U9pRXkd37GYOVeaUZ3JcTvHg==",
         "dependencies": {
-          "FlashCap.Core": "1.11.0"
+          "FlashCap.Core": "1.11.5"
         }
       },
       "Markdown.Avalonia": {
