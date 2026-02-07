@@ -65,7 +65,7 @@ public partial class QrCodeReader : IQrCodeReader
 				int i = 0;
 
 				Console.WriteLine("OpenAsync");
-				using var device = await pair0.d.OpenAsync(
+				await using var device = await pair0.d.OpenAsync(
 					pair0.c,
 					ct: cancellationToken,
 					pixelBufferArrived: scope =>

@@ -41,7 +41,7 @@
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
     <PackageVersion Include="DynamicData" Version="9.4.1" />
     <!-- UI: QR code support -->
-    <PackageVersion Include="FlashCap" Version="1.11.7" />
+    <PackageVersion Include="FlashCap" Version="1.11.9" />
     <PackageVersion Include="ZXing.Net" Version="0.16.11" />
     <!-- UI: Mobile. -->
     <PackageVersion Include="Avalonia.Android" Version="$(AvaloniaVersion)" />
