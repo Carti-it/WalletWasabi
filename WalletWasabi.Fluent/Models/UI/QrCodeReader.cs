@@ -1,4 +1,3 @@
-using Avalonia.Controls.Primitives;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using FlashCap;
