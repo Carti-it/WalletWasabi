@@ -113,6 +113,8 @@ public class WasabiApplication
 		MigrateConfigFiles();
 
 		var networkFilePath = Path.Combine(Config.DataDir, "network");
+		Logger.LogInfo($"Loading network file '{networkFilePath}'.");
+
 		Config.GetCliArgsValue("network", AppConfig.Arguments, out var networkName);
 		networkName ??= File.ReadAllText(networkFilePath).Trim();
 		var network = Network.GetNetwork(networkName ?? "mainnet");
@@ -125,6 +127,8 @@ public class WasabiApplication
 			_ => throw new NotSupportedException($"Network '{networkName}' is not supported."),
 		};
 		var configFilePath = Path.Combine(Config.DataDir, configFileName);
+
+		Logger.LogInfo($"Loading config file '{configFilePath}'.");
 		var persistentConfig = PersistentConfigManager.LoadFile(configFilePath);
 
 		if (persistentConfig is PersistentConfig config)
