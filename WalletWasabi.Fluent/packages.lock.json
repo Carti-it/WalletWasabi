@@ -80,7 +80,7 @@
         "type": "Direct",
         "requested": "[1.11.7, )",
         "resolved": "1.11.7",
-        "contentHash": "m/m+vw48beSNpbnwM1qtJ4rlEcBhvhvodSdO6nmfSWHVszCPV6bzYjVUk82myQNOVyoOOhNLZVrq2uvMLuBx9g==",
+        "contentHash": "Dl/9CwYUIE0tI21Vo3ql/SQLP7VVof3edIxKbx5KGGb5ZayQQHL3PvxKdQvgPR5PVMU1sFOfxZPycY9dlyCSJg==",
         "dependencies": {
           "FlashCap.Core": "1.11.7"
         }
@@ -226,7 +226,7 @@
       "FlashCap.Core": {
         "type": "Transitive",
         "resolved": "1.11.7",
-        "contentHash": "+RM+TLWsJXiZcZEF3VtzbGbwIJLXFKFrZl1Fsq4hUe5epnId+wThoZ8eMng4/WcfbeubdhI91Tf+NO+qGbC5oQ=="
+        "contentHash": "g2BUHUJsniS9WNHnvk1PbwfgDuzv/Hk0d6EkrrvFmdsGGGJTnLwzBnCi3JzndPGk4AfJoi1WTpB2zwsvCIU0zw=="
       },
       "HarfBuzzSharp": {
         "type": "Transitive",
