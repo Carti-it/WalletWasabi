@@ -102,6 +102,8 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 
 				await CaptureDevice.DisposeAsync();
 				Logger.LogDebug("Disposed");
+
+				CaptureDevice = null;
 			}
 		});
 
@@ -116,26 +118,26 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
     {
         try
         {
-            // Access the lazy field → enumeration happens at most once in the app lifetime
-            var devicesAndCharacteristics = AvailableDevicesAndCharacteristics.Value;
-
-            if (devicesAndCharacteristics.Count == 0)
-            {
-                throw new InvalidOperationException("No camera devices available.");
-            }
-
-            // Pick the first available (you could add UI to select if multiple)
-            var selected = devicesAndCharacteristics[0];
-
-			if (selected.Characteristic.PixelFormat == PixelFormats.Unknown)
-			{
-				throw new InvalidOperationException("Unknown pixel format.");
-			}
-
 			await Dispatcher.UIThread.InvokeAsync(async () =>
 			{
-				if (Device is null) 
+				if (CaptureDevice is null) 
 				{
+					// Access the lazy field → enumeration happens at most once in the app lifetime
+					var devicesAndCharacteristics = AvailableDevicesAndCharacteristics.Value;
+
+					if (devicesAndCharacteristics.Count == 0)
+					{
+						throw new InvalidOperationException("No camera devices available.");
+					}
+
+					// Pick the first available (you could add UI to select if multiple)
+					var selected = devicesAndCharacteristics[0];
+
+					if (selected.Characteristic.PixelFormat == PixelFormats.Unknown)
+					{
+						throw new InvalidOperationException("Unknown pixel format.");
+					}
+
 					Device = selected.Descriptor;
 
 					Console.WriteLine("OpenAsync");
