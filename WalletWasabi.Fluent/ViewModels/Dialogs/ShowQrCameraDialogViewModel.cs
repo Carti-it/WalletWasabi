@@ -1,13 +1,10 @@
-using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using NBitcoin;
 using System.Reactive.Linq;
 using WalletWasabi.Fluent.Models.UI;
 using WalletWasabi.Fluent.ViewModels.Dialogs.Base;
-using WalletWasabi.Userfacing;
 using FlashCap;
 using FlashCap.Devices;
-using FlashCap.Utilities;
 using SkiaSharp;
 using System.Linq;
 using System.Threading;
@@ -28,7 +25,7 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
     private readonly Network _network;
     private readonly QRCodeReader _decoder = new();
 
-    [AutoNotify] private Bitmap? _qrImage;
+    [AutoNotify] private SKBitmap? _qrImage;
     [AutoNotify] private string _errorMessage = "";
     [AutoNotify] private string _qrContent = "";
 
@@ -70,7 +67,9 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 	// Constructed capture device.
     private static CaptureDevice? CaptureDevice;
 
-    public ShowQrCameraDialogViewModel(UiContext context, Network network)
+    private static Action<SKBitmap?> UpdateQrImageFn = (bitmap) => { };
+
+	public ShowQrCameraDialogViewModel(UiContext context, Network network)
     {
         _network = network;
 
@@ -83,11 +82,15 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
         base.OnNavigatedTo(isInHistory, disposables);
 
         _cts = new CancellationTokenSource();
-        _ = RunCameraLoopAsync(_cts.Token); // fire-and-forget
+		UpdateQrImageFn = (bitmap) => { QrImage = bitmap; };
+
+		_ = RunCameraLoopAsync(_cts.Token); // fire-and-forget
     }
 
     protected override void OnNavigatedFrom(bool isInHistory)
     {
+		UpdateQrImageFn = (bitmap) => { };
+
 		// Fire and forget.
 		_ = Dispatcher.UIThread.InvokeAsync(async () => 
 		{
@@ -119,7 +122,7 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
             }
 
             // Pick the first available (you could add UI to select if multiple)
-            var selected = devicesAndCharacteristics.First();
+            var selected = devicesAndCharacteristics[0];
 
 			if (selected.Characteristic.PixelFormat == PixelFormats.Unknown)
 			{
@@ -161,7 +164,7 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
     }
 
 
-    private async Task OnPixelBufferArrivedAsync(PixelBufferScope bufferScope)
+    private static async Task OnPixelBufferArrivedAsync(PixelBufferScope bufferScope)
     {
         ////////////////////////////////////////////////
         // Pixel buffer has arrived.
@@ -177,8 +180,7 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 
 		Dispatcher.UIThread.Invoke(() =>
 		{
-			var bitmap = new Bitmap(image.AsStream());
-			QrImage = bitmap;
+			UpdateQrImageFn(bitmap);
 
 			// if (!string.IsNullOrEmpty(decoded))
 			// {
@@ -198,20 +200,6 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 
 		// `bitmap` is copied, so we can release pixel buffer now.
         bufferScope.ReleaseNow();
-
-        // // Switch to UI thread:
-        // if (await UIThread.TryBind())
-        // {
-        //     // Update a bitmap.
-        //     this.Image = bitmap;
-
-        //     // Update statistics.
-        //     var realFps = countFrames / timestamp.TotalSeconds;
-        //     var fpsByIndex = frameIndex / timestamp.TotalSeconds;
-        //     this.Statistics1 = $"Frame={countFrames}/{frameIndex}";
-        //     this.Statistics2 = $"FPS={realFps:F3}/{fpsByIndex:F3}";
-        //     this.Statistics3 = $"SKBitmap={bitmap.Width}x{bitmap.Height} [{bitmap.ColorType}]";
-        // }
     }
 
     private string Decode(PixelBufferScope scope)
