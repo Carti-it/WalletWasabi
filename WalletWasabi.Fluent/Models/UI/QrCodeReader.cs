@@ -1,17 +1,19 @@
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using FlashCap;
-using FlashCap.Utilities;
 using FlashCap.Devices;
+using FlashCap.Utilities;
+using SkiaSharp;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Runtime.InteropServices;
-using ZXing.QrCode;
-using SkiaSharp;
 using System.Threading;
 using System.Threading.Tasks;
-using ZXing.SkiaSharp;
-using ZXing.Common;
+using WalletWasabi.Logging;
 using ZXing;
+using ZXing.Common;
+using ZXing.QrCode;
+using ZXing.SkiaSharp;
 
 namespace WalletWasabi.Fluent.Models.UI;
 
@@ -28,39 +30,95 @@ public partial class QrCodeReader : IQrCodeReader
 
 	public bool IsPlatformSupported =>
 		RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
+		RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ||
 		RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
 	public IObservable<(string decoded, Bitmap bitmap)> Read()
 	{
 		return Observable.Create(
-			async (IObserver<(string, Bitmap)> result, CancellationToken ct) =>
+			async (IObserver<(string, Bitmap)> result, CancellationToken cancellationToken) =>
 			{
+				if (!Dispatcher.UIThread.CheckAccess())
+				{
+					throw new NotSupportedException("This method must be called on the UI thread.");
+				}
+
+				Console.WriteLine("Get capture devices");
 				var devices = new CaptureDevices();
-				var device = devices
+
+				Console.WriteLine("Enumerate descriptors");
+				var devicesAndCharacteristics = devices
 					.EnumerateDescriptors()
 					.Where(static d => d is not VideoForWindowsDeviceDescriptor)
 					.SelectMany(static d => d.Characteristics, static (d, c) => new { d, c })
-					.FirstOrDefault() ?? throw new InvalidOperationException("Could not find a device.");
+					.ToArray();
 
-				await using var capture = await device.d
-					.OpenAsync(
-						device.c,
-						ct: ct,
-						pixelBufferArrived: scope =>
+				foreach (var item in devicesAndCharacteristics)
+				{
+					Logger.LogTrace($"Found device: {item.d.Name} with characteristic: {item.c}");
+				}
+
+				var pair0 = devicesAndCharacteristics.FirstOrDefault()
+					?? throw new InvalidOperationException("Could not find a device.");
+
+				int i = 0;
+
+				Console.WriteLine("OpenAsync");
+				await using var device = await pair0.d.OpenAsync(
+					pair0.c,
+					ct: cancellationToken,
+					pixelBufferArrived: scope =>
+					{
+						i++;
+						if (i % 10 == 0)
 						{
-							var decoded = Decode(scope);
-							var bitmap = new Bitmap(scope.Buffer.ReferImage().AsStream());
+							Console.WriteLine("Decode");
+						}
 
-							result.OnNext((decoded, bitmap));
-						})
-					.ConfigureAwait(false);
+						var decoded = Decode(scope);
+						var bitmap = new Bitmap(scope.Buffer.ReferImage().AsStream());
+
+						result.OnNext((decoded, bitmap));
+					});
 
 				var tcs = new TaskCompletionSource<object?>();
+				cancellationToken.Register(() =>
+				{
+					Console.WriteLine("Cancellation token SET");
+					tcs.TrySetResult(default);
+				});
 
-				ct.Register(() => tcs.TrySetResult(default));
+				if (!Dispatcher.UIThread.CheckAccess())
+				{
+					throw new NotSupportedException("#1");
+				}
 
-				await capture.StartAsync(ct).ConfigureAwait(false);
-				await tcs.Task.ConfigureAwait(false);
+				// Start capturing.
+				await device.StartAsync(cancellationToken);
+				Console.WriteLine("Started");
+
+				if (!Dispatcher.UIThread.CheckAccess())
+				{
+					throw new NotSupportedException("#2");
+				}
+
+				// Wait until cancellation is requested.
+				await tcs.Task;
+				Console.WriteLine("Canceled");
+
+				if (!Dispatcher.UIThread.CheckAccess())
+				{
+					throw new NotSupportedException("#3");
+				}
+
+				// Stop capturing.
+				await device.StopAsync(cancellationToken);
+				Console.WriteLine("Stopped");
+
+				if (!Dispatcher.UIThread.CheckAccess())
+				{
+					throw new NotSupportedException("#4");
+				}
 			});
 	}
 

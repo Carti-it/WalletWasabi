@@ -32,7 +32,9 @@
 		<PackageReference Include="Avalonia.Fonts.Inter" />
 		<PackageReference Include="DynamicData" />
 		<PackageReference Include="Markdown.Avalonia" />
-		<PackageReference Include="QRackers" />
+		<PackageReference Include="FlashCap" />
+		<PackageReference Include="ZXing.Net" />
+		<PackageReference Include="SkiaImageView.Avalonia11" />
 	</ItemGroup>
 
 	<ItemGroup>
