@@ -15,6 +15,8 @@ using ZXing.Common;
 using ZXing.QrCode;
 using ZXing.SkiaSharp;
 using System.Reactive.Disposables;
+using Avalonia.Media.Imaging;
+using FlashCap.Utilities;
 
 namespace WalletWasabi.Fluent.ViewModels.Dialogs;
 
@@ -24,11 +26,9 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
     private readonly Network _network;
     private readonly QRCodeReader _decoder = new();
 
-    [AutoNotify] private SKBitmap? _qrImage;
+    [AutoNotify] private Bitmap? _qrImage;
     [AutoNotify] private string _errorMessage = "";
     [AutoNotify] private string _qrContent = "";
-
-    private CancellationTokenSource? _cts;
 
     private static readonly Lazy<MyCaptureDeviceDescriptor> DeviceWrapper = new(() => Dispatcher.UIThread.Invoke(() =>
 	{
@@ -63,10 +63,12 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 		}
 	}), LazyThreadSafetyMode.ExecutionAndPublication);
 
+	private static bool IsInitialized;
+
 	// Constructed capture device.
     private static CaptureDevice? CaptureDevice;
 
-    private static Action<SKBitmap?> UpdateQrImageFn = (bitmap) => { };
+    private static Action<Bitmap?> UpdateQrImageFn = (bitmap) => { };
 
 	public ShowQrCameraDialogViewModel(UiContext context, Network network)
     {
@@ -80,10 +82,9 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
     {
         base.OnNavigatedTo(isInHistory, disposables);
 
-        _cts = new CancellationTokenSource();
 		UpdateQrImageFn = (bitmap) => { QrImage = bitmap; };
 
-		_ = RunCameraLoopAsync(_cts.Token); // fire-and-forget
+		_ = RunCameraLoopAsync(); // fire-and-forget
     }
 
     protected override void OnNavigatedFrom(bool isInHistory)
@@ -99,21 +100,17 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 				await CaptureDevice.StopAsync();
 				Logger.LogDebug("Stopped");
 
-				await CaptureDevice.DisposeAsync();
-				Logger.LogDebug("Disposed");
+				// await CaptureDevice.DisposeAsync();
+				// Logger.LogDebug("Disposed");
 
-				CaptureDevice = null;
+				// CaptureDevice = null;
 			}
 		});
-
-        _cts?.Cancel();
-        _cts?.Dispose();
-        _cts = null;
 
         base.OnNavigatedFrom(isInHistory);
     }
 
-    private async Task RunCameraLoopAsync(CancellationToken cancellationToken)
+    private async Task RunCameraLoopAsync()
     {
         try
         {
@@ -126,14 +123,23 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 					Console.WriteLine("OpenAsync");
 					CaptureDevice = await wrapper.Descriptor.OpenAsync(
 						wrapper.Characteristic,
-						ct: cancellationToken,
+						// ct: cancellationToken,
 						pixelBufferArrived: OnPixelBufferArrivedAsync
 					);
 				}
 
             	Logger.LogDebug("Starting");
-            	await CaptureDevice!.StartAsync(cancellationToken);
-				Logger.LogDebug("Started");
+				try 
+				{
+
+					
+            		await CaptureDevice!.StartAsync();
+					Logger.LogDebug("Started");
+				} 
+				catch (Exception e)
+				{
+					Logger.LogDebug("Exception while starting capture", e);
+				}
 			});
         }
         catch (OperationCanceledException)
@@ -154,53 +160,32 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
     }
 
 
-    private static async Task OnPixelBufferArrivedAsync(PixelBufferScope bufferScope)
+	private static async Task OnPixelBufferArrivedAsync(PixelBufferScope bufferScope)
     {
 		Logger.LogDebug("OnPixelBufferArrivedAsync");
         ////////////////////////////////////////////////
         // Pixel buffer has arrived.
         // NOTE: Perhaps this thread context is NOT UI thread.
-        ArraySegment<byte> image = bufferScope.Buffer.ReferImage();
 
-		// Decode image data to a bitmap:
-		SKBitmap bitmap = SKBitmap.Decode(image);
+		try {
+			ArraySegment<byte> image = bufferScope.Buffer.ReferImage();
 
-        // Capture statistics variables.
-        var frameIndex = bufferScope.Buffer.FrameIndex;
-        var timestamp = bufferScope.Buffer.Timestamp;
+			var bitmap = new Bitmap(image.AsStream());
 
-		// `bitmap` is copied, so we can release pixel buffer now.
-        bufferScope.ReleaseNow();
+			// `bitmap` is copied, so we can release pixel buffer now.
+			bufferScope.ReleaseNow();
 
-		Dispatcher.UIThread.Invoke(() =>
-		{
-			UpdateQrImageFn(bitmap);
-
-			// if (!string.IsNullOrEmpty(decoded))
+			// Dispatcher.UIThread.Post(() =>
 			// {
-			// 	var parseResult = AddressParser.Parse(decoded, _network);
-
-			// 	if (parseResult.IsOk)
-			// 	{
-			// 		Close(DialogResultKind.Normal, decoded);
-			// 	}
-			// 	else
-			// 	{
-			// 		ErrorMessage = parseResult.Error ?? "Invalid address";
-			// 		QrContent = decoded;
-			// 	}
+			// 	UpdateQrImageFn(bitmap);
 			// }
-		});
+			// );
+		} 
+		catch (Exception e)
+		{
+			Logger.LogDebug($"OnPixelBufferArrivedAsync exception: {e.Message}", e);
+		}
     }
 
-    private string Decode(PixelBufferScope scope)
-    {
-        using var bitmap = SKBitmap.Decode(scope.Buffer.ReferImage());
-        var source = new SKBitmapLuminanceSource(bitmap);
-        var binary = new BinaryBitmap(new HybridBinarizer(source));
-        return _decoder.decode(binary)?.Text ?? "";
-    }
-
-    // Helper record to hold what we need (adjust based on actual types in FlashCap)
     private record MyCaptureDeviceDescriptor(CaptureDeviceDescriptor Descriptor, VideoCharacteristics Characteristic);
 }
