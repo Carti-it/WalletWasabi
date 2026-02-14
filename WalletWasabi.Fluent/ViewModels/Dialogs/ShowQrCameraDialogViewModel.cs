@@ -96,9 +96,12 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 		{
 			if (CaptureDevice is not null) 
 			{
-				Console.WriteLine("Stopping...");
+				Logger.LogDebug("Stopping...");
 				await CaptureDevice.StopAsync();
-				Console.WriteLine("Stopped");
+				Logger.LogDebug("Stopped");
+
+				await CaptureDevice.DisposeAsync();
+				Logger.LogDebug("Disposed");
 			}
 		});
 
@@ -134,26 +137,28 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 				if (Device is null) 
 				{
 					Device = selected.Descriptor;
+
 					Console.WriteLine("OpenAsync");
-					CaptureDevice = await selected.Descriptor.OpenAsync(
+					CaptureDevice = await Device!.OpenAsync(
 						selected.Characteristic,
 						ct: cancellationToken,
 						pixelBufferArrived: OnPixelBufferArrivedAsync
 					);
 				}
 
-            	Console.WriteLine("Starting");
+            	Logger.LogDebug("Starting");
             	await CaptureDevice!.StartAsync(cancellationToken);
-				Console.WriteLine("Started");
+				Logger.LogDebug("Started");
 			});
         }
         catch (OperationCanceledException)
         {
-            // expected
+			UpdateQrImageFn = (bitmap) => { };
+			Logger.LogDebug("OperationCanceledException");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Camera error: {ex.Message}");
+            Logger.LogDebug($"Camera error: {ex.Message}");
 
             Dispatcher.UIThread.Post(async () =>
             {
@@ -166,6 +171,7 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 
     private static async Task OnPixelBufferArrivedAsync(PixelBufferScope bufferScope)
     {
+		Logger.LogDebug("OnPixelBufferArrivedAsync");
         ////////////////////////////////////////////////
         // Pixel buffer has arrived.
         // NOTE: Perhaps this thread context is NOT UI thread.
@@ -177,6 +183,9 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
         // Capture statistics variables.
         var frameIndex = bufferScope.Buffer.FrameIndex;
         var timestamp = bufferScope.Buffer.Timestamp;
+
+		// `bitmap` is copied, so we can release pixel buffer now.
+        bufferScope.ReleaseNow();
 
 		Dispatcher.UIThread.Invoke(() =>
 		{
@@ -197,9 +206,6 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 			// 	}
 			// }
 		});
-
-		// `bitmap` is copied, so we can release pixel buffer now.
-        bufferScope.ReleaseNow();
     }
 
     private string Decode(PixelBufferScope scope)
