@@ -34,7 +34,6 @@
 		<PackageReference Include="Markdown.Avalonia" />
 		<PackageReference Include="FlashCap" />
 		<PackageReference Include="ZXing.Net" />
-		<PackageReference Include="SkiaImageView.Avalonia11" />
 	</ItemGroup>
 
 	<ItemGroup>
