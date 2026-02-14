@@ -15,7 +15,6 @@ using ZXing.Common;
 using ZXing.QrCode;
 using ZXing.SkiaSharp;
 using System.Reactive.Disposables;
-using System.Collections.Generic;
 
 namespace WalletWasabi.Fluent.ViewModels.Dialogs;
 
@@ -31,38 +30,38 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 
     private CancellationTokenSource? _cts;
 
-    private static readonly Lazy<IReadOnlyList<MyCaptureDeviceDescriptor>> AvailableDevicesAndCharacteristics = new(() =>
-        {
-			return Dispatcher.UIThread.Invoke<IReadOnlyList<MyCaptureDeviceDescriptor>>(() => {
-				try 
-				{
-					Console.WriteLine("Get capture devices (one-time)");
-					var devices = new CaptureDevices();
+    private static readonly Lazy<MyCaptureDeviceDescriptor> DeviceWrapper = new(() => Dispatcher.UIThread.Invoke(() =>
+	{
+		try
+		{
+			Console.WriteLine("Get capture devices (one-time)");
+			var devices = new CaptureDevices();
 
-					Console.WriteLine("Enumerate descriptors (one-time)");
-					var devicesAndCharacteristics = devices
-						.EnumerateDescriptors()
-						.Where(d => d.Characteristics.Length >= 1)
-						.Where(static d => d is not VideoForWindowsDeviceDescriptor)
-						.SelectMany(static d => d.Characteristics, static (d, c) => new MyCaptureDeviceDescriptor(d, c))
-						.ToArray();
+			Console.WriteLine("Enumerate descriptors (one-time)");
+			MyCaptureDeviceDescriptor[] devicesAndCharacteristics = devices
+				.EnumerateDescriptors()
+				.Where(d => d.Characteristics.Length >= 1)
+				.Where(static d => d is not VideoForWindowsDeviceDescriptor)
+				.SelectMany(static d => d.Characteristics, static (d, c) => new MyCaptureDeviceDescriptor(d, c))
+				.ToArray();
 
-					foreach (var item in devicesAndCharacteristics)
-					{
-						Logger.LogTrace($"Cached device: {item.Descriptor.Name} with characteristic: {item.Characteristic}");
-					}
+			foreach (var item in devicesAndCharacteristics)
+			{
+				Logger.LogTrace($"Cached device: {item.Descriptor.Name} with characteristic: {item.Characteristic}");
+			}
 
-					return devicesAndCharacteristics;
-				}
-				catch (Exception ex)
-				{
-					Logger.LogError("Failed to enumerate capture devices (one-time): " + ex.Message);
-					return Array.Empty<MyCaptureDeviceDescriptor>().AsReadOnly();
-				}
-			});
-        }, LazyThreadSafetyMode.ExecutionAndPublication);
+			if (devicesAndCharacteristics.Length == 0)
+			{
+				throw new InvalidOperationException("No camera devices available.");
+			}
 
-	public static CaptureDeviceDescriptor? Device { get; set; }
+			return devicesAndCharacteristics.First();
+		}
+		catch (Exception ex)
+		{
+			throw new InvalidOperationException("Failed to enumerate capture devices.", ex);
+		}
+	}), LazyThreadSafetyMode.ExecutionAndPublication);
 
 	// Constructed capture device.
     private static CaptureDevice? CaptureDevice;
@@ -89,12 +88,12 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 
     protected override void OnNavigatedFrom(bool isInHistory)
     {
-		UpdateQrImageFn = (bitmap) => { };
-
 		// Fire and forget.
-		_ = Dispatcher.UIThread.InvokeAsync(async () => 
+		Dispatcher.UIThread.InvokeAsync(async () =>
 		{
-			if (CaptureDevice is not null) 
+			UpdateQrImageFn = (bitmap) => { };
+
+			if (CaptureDevice is not null)
 			{
 				Logger.LogDebug("Stopping...");
 				await CaptureDevice.StopAsync();
@@ -120,29 +119,13 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
         {
 			await Dispatcher.UIThread.InvokeAsync(async () =>
 			{
-				if (CaptureDevice is null) 
+				if (CaptureDevice is null)
 				{
-					// Access the lazy field → enumeration happens at most once in the app lifetime
-					var devicesAndCharacteristics = AvailableDevicesAndCharacteristics.Value;
-
-					if (devicesAndCharacteristics.Count == 0)
-					{
-						throw new InvalidOperationException("No camera devices available.");
-					}
-
-					// Pick the first available (you could add UI to select if multiple)
-					var selected = devicesAndCharacteristics[0];
-
-					if (selected.Characteristic.PixelFormat == PixelFormats.Unknown)
-					{
-						throw new InvalidOperationException("Unknown pixel format.");
-					}
-
-					Device = selected.Descriptor;
+					var wrapper = DeviceWrapper.Value;
 
 					Console.WriteLine("OpenAsync");
-					CaptureDevice = await Device!.OpenAsync(
-						selected.Characteristic,
+					CaptureDevice = await wrapper.Descriptor.OpenAsync(
+						wrapper.Characteristic,
 						ct: cancellationToken,
 						pixelBufferArrived: OnPixelBufferArrivedAsync
 					);
