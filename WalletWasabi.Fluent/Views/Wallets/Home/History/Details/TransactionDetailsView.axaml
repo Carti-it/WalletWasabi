@@ -6,6 +6,7 @@
              xmlns:conv="clr-namespace:WalletWasabi.Fluent.Converters"
              xmlns:inputs="clr-namespace:WalletWasabi.Fluent.Views.Wallets.Transactions.Inputs"
              xmlns:outputs="clr-namespace:WalletWasabi.Fluent.Views.Wallets.Transactions.Outputs"
+             xmlns:ui="clr-namespace:WalletWasabi.Userfacing;assembly=WalletWasabi"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:DataType="details:TransactionDetailsViewModel"
              x:CompileBindings="True"
@@ -74,7 +75,7 @@
                      Label="Fee Rate"
                      CopyableContent="{Binding FeeRate.SatoshiPerByte}">
         <PrivacyContentControl>
-          <TextBlock Text="{Binding FeeRate.SatoshiPerByte, StringFormat='{}{0:0.0#####} sat/vByte'}" />
+          <TextBlock Text="{Binding FeeRate.SatoshiPerByte, StringFormat={x:Static ui:UiConstants.FeeRateStringFormat}}, FallbackValue='FORMAT FAILED'}" />
         </PrivacyContentControl>
       </PreviewItem>
 
