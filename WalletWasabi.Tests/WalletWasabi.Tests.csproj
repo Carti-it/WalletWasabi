@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
 		<DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
@@ -60,6 +60,9 @@
 		</None>
 		<None Update="UnitTests\Data\Slip39TestVectors.json">
 		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="BundledApps\Binaries\linux-arm64\bitcoind">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="BundledApps\Binaries\linux-x64\bitcoind">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
