@@ -8,10 +8,13 @@
 	<InvariantGlobalization>true</InvariantGlobalization>
 	<WarningsAsErrors>false</WarningsAsErrors>
 
+	<!-- TODO - Fluent.Desktop should not depend on Daemon project (EXE depends on EXE). -->
+	<ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+
 	<!-- Audit both top-level and transitive dependencies for vulnerabilities in NuGet packages. -->
 	<!-- https://learn.microsoft.com/en-us/nuget/concepts/auditing-packages#setting-a-security-audit-mode -->
 	<NuGetAuditMode>all</NuGetAuditMode>
-    <NuGetAuditLevel>low</NuGetAuditLevel>
+	<NuGetAuditLevel>low</NuGetAuditLevel>
  </PropertyGroup>
 
  <ItemGroup>
