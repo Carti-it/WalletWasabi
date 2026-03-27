@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -45,7 +44,6 @@ public partial class Arena : PeriodicRunner
 
 	public HashSet<Round> Rounds { get; } = new();
 	private ImmutableList<RoundState> _roundStates = ImmutableList<RoundState>.Empty;
-	private readonly ConcurrentQueue<uint256> _disruptedRounds = new();
 	private readonly AsyncLock _asyncLock = new();
 	private readonly WabiSabiConfig _config;
 	private readonly IRPCClient _rpc;
@@ -75,8 +73,6 @@ public partial class Arena : PeriodicRunner
 
 			// Ensure there's at least one non-blame round in input registration.
 			await CreateRoundsAsync(cancel).ConfigureAwait(false);
-
-			AbortDisruptedRounds();
 
 			// RoundStates have to contain all states. Do not change stateId=0.
 			SetRoundStates();
@@ -559,19 +555,6 @@ public partial class Arena : PeriodicRunner
 	private void AddRound(Round round)
 	{
 		Rounds.Add(round);
-	}
-
-	private void AbortDisruptedRounds()
-	{
-		while (_disruptedRounds.TryDequeue(out var disruptedRoundId))
-		{
-			var roundOrNull = Rounds.FirstOrDefault(x => x.Id == disruptedRoundId);
-			if (roundOrNull is { } nonNullRound)
-			{
-				Logger.LogInfo("Round aborted because it was disrupted by double spenders.", nonNullRound);
-				nonNullRound.EndRound(EndRoundState.AbortedDoubleSpendingDetected);
-			}
-		}
 	}
 
 	private void SetRoundPhase(Round round, Phase phase)
