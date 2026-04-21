@@ -46,7 +46,7 @@ public class HwiProcessBridge : IHwiProcessInvoker
 			processAsync.StartInfo.RedirectStandardInput = true;
 		}
 
-		processAsync.StartWithExceptionLogging();
+		processAsync.Start();
 
 		if (standardInputWriter is { })
 		{
@@ -58,7 +58,7 @@ public class HwiProcessBridge : IHwiProcessInvoker
 			? Task.FromResult(string.Empty)
 			: processAsync.StandardOutput.ReadToEndAsync();
 
-		await processAsync.GracefulWaitForExitAsync(token).ConfigureAwait(false);
+		await processAsync.WaitForExitAsync(token).ConfigureAwait(false);
 
 		string output = await readPipeTask.ConfigureAwait(false);
 
