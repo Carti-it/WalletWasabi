@@ -784,18 +784,34 @@ public class CoinJoinManager : BackgroundService
 	/// The other 2 is only needed not to loose the StopWhenAllMixed and OverridePlebStop configuration.
 	/// Right now, the Shutdown prevention and the Send workflow can block the CJs.
 	/// </param>
-	private record ManagerState(
-		ConcurrentDictionary<WalletId, CoinJoinTracker> TrackedCoinJoins,
-		ConcurrentDictionary<WalletId, TrackedAutoStart> TrackedAutoStarts,
-		ConcurrentDictionary<WalletId, UiBlockedStateHolder> WalletsBlockedByUi)
+	private class ManagerState
 	{
-		public ManagerState() : this(
-			new ConcurrentDictionary<WalletId, CoinJoinTracker>(),
-			new ConcurrentDictionary<WalletId, TrackedAutoStart>(),
-			new ConcurrentDictionary<WalletId, UiBlockedStateHolder>())
+		private readonly ConcurrentDictionary<WalletId, WalletCoinJoinState> _map = new();
+
+		public ManagerState()
 		{
 		}
+
+		public bool TryGet(WalletId walletId, out WalletCoinJoinState? state)
+		{
+			if (_map.TryGetValue(walletId, out var walletState))
+			{
+				state = walletState;
+				return true;
+			}
+
+			state = null;
+			return false;
+		}
 	}
+
+	private record WalletCoinJoinState(
+		bool IsTracked,
+		CoinJoinTracker? CoinJoinTracker,
+		TrackedAutoStart? TrackedAutoStart,
+		UiBlockedStateHolder? BlockedByUi
+	)
+	{ }
 }
 
 public record CoinJoinConfiguration(string CoordinatorIdentifier,  decimal MaxCoinJoinMiningFeeRate, int AbsoluteMinInputCount, bool AllowSoloCoinjoining);
