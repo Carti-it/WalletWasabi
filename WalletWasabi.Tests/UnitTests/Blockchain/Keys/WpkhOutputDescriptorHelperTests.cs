@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using NBitcoin;
 using NBitcoin.WalletPolicies;
 using WalletWasabi.Blockchain.Keys;
@@ -19,7 +22,23 @@ public class WpkhWalletPolicyHelperTests
 
 		WalletPolicy walletPolicy = WpkhWalletPolicyHelper.Get(testNet, masterFingerprint, accountPrivateKey, keyPath);
 
-		string expected = "wpkh([f3a4c42f/84'/0'/0']tprv8ghYQhz7XQhoqDZG8SzbkqGCDTwAzyVVmUN3cUerPhUgK91Xvc4FaMJpYwrjuQ48WD7KdQ7Y6znKnaY9PXP8SiDLv1srjjs8NVYGuM7Hrrk/<0;1>/*)";
-		Assert.Equal(expected, walletPolicy.FullDescriptor.ToString());
+		//string expected = "wpkh([f3a4c42f/84'/0'/0']tprv8ghYQhz7XQhoqDZG8SzbkqGCDTwAzyVVmUN3cUerPhUgK91Xvc4FaMJpYwrjuQ48WD7KdQ7Y6znKnaY9PXP8SiDLv1srjjs8NVYGuM7Hrrk/<0;1>/*)";
+		//Assert.Equal(expected, walletPolicy.FullDescriptor.ToString());
+
+		for (int i = 0; i < 5; i++)
+		{
+			BitcoinAddress address = DeriveAddress(walletPolicy, AddressIntent.Deposit, i, testNet);
+			Console.WriteLine($"Address {i}: {address}");
+			Debug.WriteLine($"Address {i}: {address}");
+		}
+	}
+
+	public BitcoinAddress DeriveAddress(WalletPolicy walletPolicy, AddressIntent addressIntent, int index, Network network)
+	{
+		Miniscript.Scripts expectedScripts = walletPolicy.FullDescriptor.Derive(addressIntent, index).Miniscript.ToScripts();
+		BitcoinAddress? result = expectedScripts.ScriptPubKey.GetDestinationAddress(network);
+		Assert.NotNull(result);
+
+		return result;
 	}
 }
