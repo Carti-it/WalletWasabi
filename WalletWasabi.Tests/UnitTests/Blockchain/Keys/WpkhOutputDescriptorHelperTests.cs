@@ -5,6 +5,7 @@ using NBitcoin;
 using NBitcoin.WalletPolicies;
 using WalletWasabi.Blockchain.Keys;
 using Xunit;
+using static WalletWasabi.Blockchain.Keys.WpkhWalletPolicyHelper;
 
 namespace WalletWasabi.Tests.UnitTests.Blockchain.Keys;
 
@@ -20,17 +21,23 @@ public class WpkhWalletPolicyHelperTests
 		KeyPath keyPath = new("84'/0'/0'");
 		HDFingerprint masterFingerprint = new(0x2fc4a4f3);
 
-		WalletPolicy walletPolicy = WpkhWalletPolicyHelper.Get(testNet, masterFingerprint, accountPrivateKey, keyPath);
+		WalletPolicies walletPolicies = WpkhWalletPolicyHelper.Get(testNet, masterFingerprint, accountPrivateKey, keyPath);
 
-		//string expected = "wpkh([f3a4c42f/84'/0'/0']tprv8ghYQhz7XQhoqDZG8SzbkqGCDTwAzyVVmUN3cUerPhUgK91Xvc4FaMJpYwrjuQ48WD7KdQ7Y6znKnaY9PXP8SiDLv1srjjs8NVYGuM7Hrrk/<0;1>/*)";
-		//Assert.Equal(expected, walletPolicy.FullDescriptor.ToString());
-
+		Console.WriteLine("Using xprv walletPolicy:");
 		for (int i = 0; i < 5; i++)
 		{
-			BitcoinAddress address = DeriveAddress(walletPolicy, AddressIntent.Deposit, i, testNet);
-			Console.WriteLine($"Address {i}: {address}");
-			Debug.WriteLine($"Address {i}: {address}");
+			BitcoinAddress addr = DeriveAddress(walletPolicies.PrivateWalletPolicy, AddressIntent.Deposit, i, testNet);
+			Console.WriteLine($"xprv Address {i}: {addr}");
+			Debug.WriteLine($"xprv Address {i}: {addr}");
 		}
+
+		Console.WriteLine("Using xpub walletPolicyXpub:");
+		for (int i = 0; i < 5; i++)
+		{
+			BitcoinAddress addr = DeriveAddress(walletPolicies.PublicWalletPolicy, AddressIntent.Deposit, i, testNet);
+			Console.WriteLine($"xpub Address {i}: {addr}");
+			Debug.WriteLine($"xpub Address {i}: {addr}");
+		}	
 	}
 
 	public BitcoinAddress DeriveAddress(WalletPolicy walletPolicy, AddressIntent addressIntent, int index, Network network)

@@ -20,7 +20,7 @@ public partial class WalletInfoModel
 			ExtendedMasterZprv = secret.ToZPrv(network);
 
 			// TODO: Should work for every type of wallet, temporarily disabling it.
-			WpkhWalletPolicy = wallet.KeyManager.GetWpkhWalletPolicy(wallet.Password, network);
+			WpkhWalletPolicy = wallet.KeyManager.GetWpkhWalletPolicy(wallet.Password, network).PrivateWalletPolicy;
 		}
 
 		SegWitExtendedAccountPublicKey = wallet.KeyManager.SegwitExtPubKey.ToString(network);

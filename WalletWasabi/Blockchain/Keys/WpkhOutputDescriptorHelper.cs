@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using NBitcoin;
 using NBitcoin.WalletPolicies;
 
@@ -6,7 +7,7 @@ namespace WalletWasabi.Blockchain.Keys;
 public class WpkhWalletPolicyHelper
 {
 	/// <seealso href="https://bips.dev/388/"/>
-	public static WalletPolicy Get(Network network, HDFingerprint masterFingerprint, ExtKey notDerivedAccountKey, KeyPath accountKeyPath)
+	public static WalletPolicies Get(Network network, HDFingerprint masterFingerprint, ExtKey notDerivedAccountKey, KeyPath accountKeyPath)
 	{
 		ExtKey accountKey = notDerivedAccountKey.Derive(accountKeyPath);
 
@@ -16,8 +17,16 @@ public class WpkhWalletPolicyHelper
 		// Optional part is followed by the actual private key: "tprv8ghYQhz7XQhoqDZG8SzbkqGCDTwAzyVVmUN3cUerPhUgK91Xvc4FaMJpYwrjuQ48WD7KdQ7Y6znKnaY9PXP8SiDLv1srjjs8NVYGuM7Hrrk"
 		string privateDescriptor = $"{optionalPart}{accountKey.ToString(network)}";
 
-		WalletPolicy walletPolicy = WalletPolicy.Parse($"wpkh({privateDescriptor}/<0;1>/*)", network);
+		WalletPolicy privateWalletPolicy = WalletPolicy.Parse($"wpkh({privateDescriptor}/<0;1>/*)", network);
+		Debug.WriteLine($"wpkh({privateDescriptor}/<0;1>/*)");
 
-		return walletPolicy;
+		ExtPubKey accountPub = accountKey.Neuter();
+		string publicDescriptor = $"{optionalPart}{accountPub.ToString(network)}";
+		WalletPolicy publicWalletPolicy = WalletPolicy.Parse($"wpkh({publicDescriptor}/<0;1>/*)", network);
+		Debug.WriteLine($"wpkh({publicDescriptor}/<0;1>/*)");
+
+		return new WalletPolicies(privateWalletPolicy, publicWalletPolicy);
 	}
+
+	public record WalletPolicies(WalletPolicy PrivateWalletPolicy, WalletPolicy PublicWalletPolicy);
 }

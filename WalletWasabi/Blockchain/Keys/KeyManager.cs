@@ -147,7 +147,7 @@ public class KeyManager
 			_ => throw new ArgumentException($"Unknown account for network '{network}' and key purpose.")
 		});
 
-	public WalletPolicy GetWpkhWalletPolicy(string password, Network network)
+	public WpkhWalletPolicyHelper.WalletPolicies GetWpkhWalletPolicy(string password, Network network)
 	{
 		if (!MasterFingerprint.HasValue)
 		{
