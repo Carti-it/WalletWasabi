@@ -73,16 +73,15 @@ public class Global
 		HostedServices = new HostedServices();
 
 		var mempoolService = new MempoolService(EventBus);
-		FilterHeaderChain = new FilterHeaderChain();
+		FilterHeaders = new FilterHeaderChain();
 		var networkWorkFolderPath = Path.Combine(DataDir, "BitcoinStore", Network.ToString());
 		var fileSystemBlockRepository = new FileSystemBlockRepository(Path.Combine(networkWorkFolderPath, "Blocks"), Network);
 
 		TransactionStore = new AllTransactionStore(networkWorkFolderPath, Network);
-		FilterStore = new FilterStore(Path.Combine(networkWorkFolderPath, "IndexStore"), Network, FilterHeaderChain, EventBus);
+		FilterStore = new FilterStore(Path.Combine(networkWorkFolderPath, "IndexStore"), Network, FilterHeaders, EventBus);
 		_ticker = new Timer(_ => EventBus.Publish(new Tick(DateTime.UtcNow)));
 
 		ExternalSourcesHttpClientFactory = BuildHttpClientFactory();
-
 
 		var p2PDataDir = GetBitcoinP2pNetworkDirectory();
 		_blockHeaders = ConfigureBlockHeaderChain(p2PDataDir);
@@ -96,7 +95,7 @@ public class Global
 			Config.Network,
 			FilterStore,
 			TransactionStore,
-			FilterHeaderChain,
+			FilterHeaders,
 			mempoolService,
 			Config.ServiceConfiguration,
 			blockProvider,
@@ -125,7 +124,7 @@ public class Global
 	public string DataDir { get; }
 	public TorSettings TorSettings { get; }
 
-	public FilterHeaderChain FilterHeaderChain { get; }
+	public FilterHeaderChain FilterHeaders { get; }
 	public FilterStore FilterStore { get; }
 	public AllTransactionStore TransactionStore { get; }
 	public IHttpClientFactory ExternalSourcesHttpClientFactory { get; }
@@ -171,9 +170,8 @@ public class Global
 		}
 
 		var p2PDataDir = GetBitcoinP2pNetworkDirectory();
-		var chainBehavior = new BlockHeadersChainBehavior(_blockHeaders, FilterHeaderChain, EventBus);
+		var chainBehavior = new BlockHeadersChainBehavior(_blockHeaders, FilterHeaders, EventBus);
 		var p2PBehavior = new P2pBehavior(mempoolService);
-		var fhBehavior = new CompactFilterHeadersBehavior(_blockHeaders, FilterHeaderChain, EventBus);
 
 		var nodesGroup = Network == Network.RegTest
 			? P2pNetwork.CreateNodesGroupForRegTest(p2PBehavior)
@@ -181,7 +179,7 @@ public class Global
 				Network,
 				Config.UseTor != TorMode.Disabled ? TorSettings.SocksEndpoint : null,
 				p2PDataDir,
-				Config.BlockOnlyMode ? [] : [chainBehavior, fhBehavior, p2PBehavior]);
+				Config.BlockOnlyMode ? [] : [chainBehavior, p2PBehavior]);
 
 		return nodesGroup;
 	}
@@ -320,13 +318,40 @@ public class Global
 	private async Task ConfigureSynchronizerAsync(CancellationToken cancellationToken)
 	{
 		var supportsBlockFiltersResult = await _bitcoinRpcClient.SupportsBlockFiltersAsync(cancellationToken).ConfigureAwait(false);
-		var filtersProviderResult = supportsBlockFiltersResult.Map(_ => FilterProviders.CreateBitcoinRpcFilterProvider(_bitcoinRpcClient, _blockHeaders));
+		var filtersProvider = supportsBlockFiltersResult
+			.Map(_ => FilterProviders.CreateBitcoinRpcFilterProvider(_bitcoinRpcClient, _blockHeaders))
+			.Match(
+				rpcProvider => rpcProvider,
+				_ =>
+				{
+					var templateBehaviors = NodesGroup.NodeConnectionParameters.TemplateBehaviors;
+					var tip = FilterStore.GetTip()!.Header;
+					var synchronizationState = new FilterSynchronizationState(_blockHeaders, FilterHeaders, tip.Height);
+					templateBehaviors.Add(new CompactFilterBehavior(synchronizationState, _blockHeaders, EventBus));
 
-		if (filtersProviderResult is {IsOk: false, Error: var isIndexDisabled})
+					return FilterProviders.CreateBitcoinP2pFilterProvider(FilterHeaders, _blockHeaders, synchronizationState);
+				});
+
+
+		var (pause, resume, serviceLoop) =
+			Continuously(Synchronizer.CreateFilterGenerator(filtersProvider, FilterStore, FilterHeaders, EventBus));
+
+		if (supportsBlockFiltersResult.IsOk)
 		{
-			if (isIndexDisabled)
+			EventBus.Subscribe<RpcStatusChanged>(e =>
 			{
-				throw new Exception("\nWasabi is connected to a bitcoin RPC that doesn't provides compact filters (BIP158)."
+				var action = e.Status.Match(
+					x => x.Synchronized ? resume : pause,
+					_ => pause);
+				action();
+			}).DisposeUsing(_disposables);
+		}
+		else
+		{
+			var errorBecauseIndexIsDisabled = supportsBlockFiltersResult.Error;
+			if( errorBecauseIndexIsDisabled)
+			{
+				Logger.LogInfo("\nWasabi is connected to a bitcoin RPC that doesn't provides compact filters (BIP158)."
 								+ "\nCompact filters are disabled by default in Bitcoin and you have to enable them."
 								+ "\nIf you are using your own node then edit the bitcoin.conf file and add the line:"
 								+ "\nblockfilterindex=1"
@@ -343,13 +368,10 @@ public class Global
 			{
 				Logger.LogWarning($"Was not able to connect to the Bitcoin RPC server '{Config.BitcoinRpcUri}' with the credentials provided. " +
 				                  "Please configure valid RPC credentials in settings and restart.");
-				return;
 			}
-		}
 
-		var filtersProvider = filtersProviderResult.Value;
-		var (pause, resume, serviceLoop) =
-			Continuously(Synchronizer.CreateFilterGenerator(filtersProvider, FilterStore, FilterHeaderChain, EventBus));
+			await resume().ConfigureAwait(false);
+		}
 
 		Spawn("Synchronizer", Service("Wasabi Index-Based Synchronizer", serviceLoop), cancellationToken)
 			.DisposeUsing(_disposables);
@@ -368,7 +390,7 @@ public class Global
 			if (e.Status.IsOk)
 			{
 				var serverTip = (uint)e.Status.Value.Headers;
-				FilterHeaderChain.SetServerTipHeight(new ChainHeight(serverTip));
+				FilterHeaders.SetServerTipHeight(new ChainHeight(serverTip));
 				EventBus.Publish(new NetworkTipHeightChanged(serverTip));
 			}
 		}).DisposeUsing(_disposables);
@@ -639,7 +661,7 @@ public class Global
 		if (!_disposeRequested)
 		{
 			_disposeRequested = true;
-			_stoppingCts.Cancel();
+			await _stoppingCts.CancelAsync();
 		}
 		else
 		{
@@ -750,25 +772,6 @@ public class Global
 				_stoppingCts.Dispose();
 				Logger.LogTrace("Dispose finished.");
 			}
-		}
-	}
-}
-
-static class NBitcoinExtensions
-{
-	extension(ConcurrentChain blockHeaders)
-	{
-		public byte[] ToBlockHashesBytes()
-		{
-			return blockHeaders.ToBytes(new ConcurrentChain.ChainSerializationFormat
-				{SerializeBlockHeader = false, SerializePrecomputedBlockHash = true});
-		}
-
-		private byte[] ToBytes(ConcurrentChain.ChainSerializationFormat format)
-		{
-			var ms = new MemoryStream();
-			blockHeaders.WriteTo(ms, format);
-			return ms.ToArray();
 		}
 	}
 }

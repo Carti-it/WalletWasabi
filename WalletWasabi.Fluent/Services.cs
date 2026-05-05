@@ -41,7 +41,7 @@ public class Services : IServices
 		Guard.NotNull(nameof(global.DataDir), global.DataDir);
 		Guard.NotNull(nameof(global.TorSettings), global.TorSettings);
 		Guard.NotNull(nameof(global.FilterStore), global.FilterStore);
-		Guard.NotNull(nameof(global.FilterHeaderChain), global.FilterHeaderChain);
+		Guard.NotNull(nameof(global.FilterHeaders), global.FilterHeaders);
 		Guard.NotNull(nameof(global.TransactionStore), global.TransactionStore);
 		Guard.NotNull(nameof(global.ExternalSourcesHttpClientFactory), global.ExternalSourcesHttpClientFactory);
 		Guard.NotNull(nameof(global.Config), global.Config);
@@ -53,7 +53,7 @@ public class Services : IServices
 
 		_torSettings = global.TorSettings;
 		_filterStore = global.FilterStore;
-		_filterHeaderChain = global.FilterHeaderChain;
+		_filterHeaderChain = global.FilterHeaders;
 		_transactionStore = global.TransactionStore;
 		_httpClientFactory = global.ExternalSourcesHttpClientFactory;
 		_transactionBroadcaster = global.TransactionBroadcaster;
