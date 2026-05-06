@@ -51,6 +51,8 @@ public class P2pBehavior : NodeBehavior
 	{
 		try
 		{
+			Logger.LogDebug($"P2pBehavior.MessageReceived: Received {message.Message} from {node} (payload={message.Message.Payload})");
+
 			if (message.Message.Payload is GetDataPayload getDataPayload)
 			{
 				await ProcessGetDataAsync(node, getDataPayload).ConfigureAwait(false);
