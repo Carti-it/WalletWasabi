@@ -26,6 +26,8 @@ public class P2pBasedTests
 	public async Task MempoolNotifiesAsync()
 	{
 		Console.WriteLine($"==== Run #1 ====");
+		string dir = await Common.GetEmptyWorkDirAsync();
+
 		CoreNode coreNode = await TestNodeBuilder.CreateAsync();
 
 		using var node = await coreNode.CreateNewP2pNodeAsync();
@@ -33,7 +35,6 @@ public class P2pBasedTests
 		try
 		{
 			Console.WriteLine($"MempoolNotifiesAsync - 1st");
-			string dir = await Common.GetEmptyWorkDirAsync();
 			var network = coreNode.Network;
 			var rpc = coreNode.RpcClient;
 
@@ -41,12 +42,12 @@ public class P2pBasedTests
 			await rpc.CreateWalletAsync(walletName);
 
 			Console.WriteLine($"MempoolNotifiesAsync - 2nd");
-			SmartHeaderChain smartHeaderChain = new();
-			await using AllTransactionStore transactionStore = new(Path.Combine(dir, "transactionStore"), network);
+			FilterHeaderChain filterHeaderChain = new();
+			using AllTransactionStore transactionStore = new(Path.Combine(dir, "transactionStore"), network);
 			await transactionStore.InitializeAsync(CancellationToken.None);
 
 			Console.WriteLine($"MempoolNotifiesAsync - 3rd");
-			await using FilterStore filterStore = new(Path.Combine(dir, "indexStore"), network, smartHeaderChain, TestNodeBuilder.EventBus);
+			using FilterStore filterStore = new(Path.Combine(dir, "indexStore"), network, filterHeaderChain, TestNodeBuilder.EventBus);
 			await filterStore.InitializeAsync(new Height.ChainHeight(0u), CancellationToken.None);
 
 			MempoolService mempoolService = coreNode.MempoolService;
