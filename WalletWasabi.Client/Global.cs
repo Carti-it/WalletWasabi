@@ -100,11 +100,19 @@ public class Global
 			cpfpProvider);
 
 		WalletManager = new WalletManager(Config.Network, DataDir, new WalletDirectories(Config.Network, DataDir), walletFactory);
-
 		var broadcasters = CreateBroadcasters(NodesGroup, mempoolService);
 		TransactionBroadcaster = new TransactionBroadcaster(broadcasters.ToArray(), mempoolService, WalletManager);
 
 		Scheme = new Scheme(this);
+
+		_disposables
+			.Add(Status)
+			.Add(HostedServices)
+			.Add(FilterStore)
+			.Add(NodesGroup)
+			.Add(TransactionStore)
+			.Add(_ticker)
+			.Add(_stoppingCts);
 	}
 
 	private readonly AsyncLock _initializationAsyncLock = new();
@@ -116,6 +124,7 @@ public class Global
 	private ConcurrentChain? _blockHeaderChain;
 	private readonly Timer _ticker;
 	private readonly ComposedDisposable _disposables = new();
+	private readonly ComposedAsyncDisposable _asyncDisposables = new();
 
 	public StatusContainer Status { get; }
 	public string DataDir { get; }
@@ -547,6 +556,7 @@ public class Global
 			try
 			{
 				await RpcServer.StartAsync(cancel).ConfigureAwait(false);
+				RpcServer.DisposeUsing(_disposables);
 			}
 			catch (HttpListenerException e)
 			{
@@ -562,6 +572,7 @@ public class Global
 		{
 			TorProcessManager processManager = new(TorSettings, EventBus);
 			_torManager = new TorManager(TorSettings, processManager);
+			_torManager.DisposeUsing(_asyncDisposables);
 			await _torManager.StartAsync(attempts: 3, cancellationToken).ConfigureAwait(false);
 			Logger.LogInfo($"{nameof(TorManager)} is initialized.");
 
@@ -596,6 +607,7 @@ public class Global
 	{
 		var prisonForCoordinator = Path.Combine(DataDir, coordinatorUri.Host);
 		_coinPrison = CoinPrison.CreateOrLoadFromFile(prisonForCoordinator);
+		_coinPrison.DisposeUsing(_disposables);
 
 		EventBus
 			.Subscribe<WalletLoaded>(e => _coinPrison.UpdateWallet(e.Wallet))
@@ -662,24 +674,6 @@ public class Global
 					Logger.LogError($"Error during {nameof(WalletManager.RemoveAndStopAllAsync)}: {ex}");
 				}
 
-				Status.Dispose();
-
-				NodesGroup.Dispose();
-
-				_disposables.Dispose();
-
-				if (_coinPrison is { } coinPrison)
-				{
-					coinPrison.Dispose();
-				}
-
-				if (RpcServer is { } rpcServer)
-				{
-					using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(21));
-					await rpcServer.StopAsync(cts.Token).ConfigureAwait(false);
-					Logger.LogInfo($"{nameof(RpcServer)} is stopped.");
-				}
-
 				if (HostedServices is { } backgroundServices)
 				{
 					using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(21));
@@ -688,7 +682,7 @@ public class Global
 					Logger.LogInfo("Stopped background services.");
 				}
 
-				if (_torManager is { } torManager)
+				if (_torManager is not null)
 				{
 					using CancellationTokenSource cts = new(TimeSpan.FromSeconds(5));
 
@@ -715,22 +709,11 @@ public class Global
 						}
 					}
 
-					await torManager.DisposeAsync().ConfigureAwait(false);
 					Logger.LogInfo("TorManager is stopped.");
 				}
 
-				try
-				{
-					await FilterStore.DisposeAsync().ConfigureAwait(false);
-					Logger.LogInfo($"{nameof(FilterStore)} is disposed.");
-
-					await TransactionStore.DisposeAsync().ConfigureAwait(false);
-					Logger.LogInfo($"{nameof(AllTransactionStore)} is disposed.");
-				}
-				catch (Exception ex)
-				{
-					Logger.LogError($"Error during the disposal of {nameof(FilterStore)} and {nameof(AllTransactionStore)}: {ex}");
-				}
+				_disposables.Dispose();
+				await _asyncDisposables.DisposeAsync().ConfigureAwait(false);
 			}
 			catch (Exception ex)
 			{
@@ -738,7 +721,6 @@ public class Global
 			}
 			finally
 			{
-				_stoppingCts.Dispose();
 				Logger.LogTrace("Dispose finished.");
 			}
 		}
