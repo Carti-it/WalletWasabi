@@ -106,7 +106,7 @@ public static class Constants
 
 	public static readonly NodeRequirement NodeRequirements = new()
 	{
-		RequiredServices = NodeServices.NODE_WITNESS, //| NodeServices.NODE_COMPACT_FILTERS,
+		RequiredServices = NodeServices.NODE_WITNESS,
 		MinVersion = ProtocolVersionWitnessVersion,
 		MinProtocolCapabilities = new ProtocolCapabilities { SupportGetBlock = true, SupportWitness = true, SupportMempoolQuery = true }
 	};
