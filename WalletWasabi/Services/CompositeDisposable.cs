@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
+namespace WalletWasabi.Services;
+
 public class ComposedDisposable : IDisposable
 {
 	private readonly List<IDisposable> _disposables = [];
@@ -11,12 +13,6 @@ public class ComposedDisposable : IDisposable
 		ObjectDisposedException.ThrowIf(_isDisposed, this);
 		_disposables.Add(disposable);
 		return this;
-	}
-
-	public void Dispose()
-	{
-		Dispose(true);
-		GC.SuppressFinalize(this);
 	}
 
 	protected virtual void Dispose(bool disposing)
@@ -37,17 +33,34 @@ public class ComposedDisposable : IDisposable
 			_isDisposed = true;
 		}
 	}
+
+	public void Dispose()
+	{
+		Dispose(true);
+		GC.SuppressFinalize(this);
+	}
 }
 
+/// <summary>
+/// Class for disposing multiple <see cref="IDisposable"/> and <see cref="IAsyncDisposable"/> objects in a single call to <see cref="DisposeAsync"/>.
+/// </summary>
 public class ComposedAsyncDisposable : IAsyncDisposable
 {
-	private readonly List<IAsyncDisposable> _disposables = [];
+	private readonly List<object> _disposables = [];
 	private bool _isDisposed = false;
 
-	public void Add(IAsyncDisposable disposable)
+	public ComposedAsyncDisposable Add(IDisposable disposable)
 	{
 		ObjectDisposedException.ThrowIf(_isDisposed, this);
 		_disposables.Add(disposable);
+		return this;
+	}
+
+	public ComposedAsyncDisposable Add(IAsyncDisposable disposable)
+	{
+		ObjectDisposedException.ThrowIf(_isDisposed, this);
+		_disposables.Add(disposable);
+		return this;
 	}
 
 	public async ValueTask DisposeAsync()
@@ -59,7 +72,18 @@ public class ComposedAsyncDisposable : IAsyncDisposable
 			_disposables.Reverse();
 			foreach (var disposable in _disposables)
 			{
-				await disposable.DisposeAsync();
+				if (disposable is IAsyncDisposable asyncDisposable)
+				{
+					await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+				}
+				else if (disposable is IDisposable syncDisposable)
+				{
+					syncDisposable.Dispose();
+				}
+				else
+				{
+					throw new InvalidOperationException($"Unexpected disposable type: {disposable.GetType()}");
+				}
 			}
 		}
 	}
@@ -74,6 +98,13 @@ public static class DisposableExtensions
 	}
 
 	public static ComposedAsyncDisposable DisposeUsing(this IAsyncDisposable disposable,
+		ComposedAsyncDisposable container)
+	{
+		container.Add(disposable);
+		return container;
+	}
+
+	public static ComposedAsyncDisposable DisposeUsing(this IDisposable disposable,
 		ComposedAsyncDisposable container)
 	{
 		container.Add(disposable);
