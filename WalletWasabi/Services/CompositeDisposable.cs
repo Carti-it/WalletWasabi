@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using WalletWasabi.Logging;
 
 namespace WalletWasabi.Services;
 
@@ -24,6 +25,7 @@ public class ComposedDisposable : IDisposable
 				_disposables.Reverse();
 				foreach (var disposable in _disposables)
 				{
+					Logger.LogTrace($"Disposing {disposable.GetType()?.Name}");
 					disposable.Dispose();
 				}
 
@@ -72,6 +74,8 @@ public class ComposedAsyncDisposable : IAsyncDisposable
 			_disposables.Reverse();
 			foreach (var disposable in _disposables)
 			{
+				Logger.LogTrace($"Disposing {disposable.GetType()?.Name}");
+
 				if (disposable is IAsyncDisposable asyncDisposable)
 				{
 					await asyncDisposable.DisposeAsync().ConfigureAwait(false);
