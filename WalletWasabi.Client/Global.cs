@@ -326,7 +326,7 @@ public class Global
 				{
 					var templateBehaviors = NodesGroup.NodeConnectionParameters.TemplateBehaviors;
 					var tip = FilterStore.GetTip()!.Header;
-					var synchronizationState = new FilterSynchronizationState(_blockHeaders, FilterHeaders, tip.Height);
+					var synchronizationState = new CompactFilterBehavior.FilterSynchronizationState(_blockHeaders, FilterHeaders, tip.Height);
 					templateBehaviors.Add(new CompactFilterBehavior(synchronizationState, _blockHeaders, EventBus));
 
 					return FilterProviders.CreateBitcoinP2pFilterProvider(FilterHeaders, _blockHeaders, synchronizationState);
@@ -375,15 +375,6 @@ public class Global
 
 		Spawn("Synchronizer", Service("Wasabi Index-Based Synchronizer", serviceLoop), cancellationToken)
 			.DisposeUsing(_disposables);
-
-		EventBus.Subscribe<RpcStatusChanged>(e =>
-		{
-			var action = e.Status.Match(
-				x => x.Synchronized ? resume : pause,
-				_ => pause);
-			action();
-		}).DisposeUsing(_disposables);
-
 
 		EventBus.Subscribe<RpcStatusChanged>(e =>
 		{
@@ -661,7 +652,7 @@ public class Global
 		if (!_disposeRequested)
 		{
 			_disposeRequested = true;
-			await _stoppingCts.CancelAsync();
+			await _stoppingCts.CancelAsync().ConfigureAwait(false);
 		}
 		else
 		{
