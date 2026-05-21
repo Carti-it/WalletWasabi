@@ -791,7 +791,7 @@ public class CompactFilterBehavior(
 		}
 	}
 
-	class RequestTracker<TProcessedResponse>(TimeProvider timeProvider, uint initialHeight = 0) where TProcessedResponse : Response
+	class RequestTracker<TProcessedResponse>(TimeProvider timeProvider, uint initialHeight) where TProcessedResponse : Response
 	{
 		private readonly TimeProvider _timeProvider = timeProvider;
 		private readonly SortedDictionary<uint, TProcessedResponse> _pendingResponses = [];
