@@ -15,6 +15,8 @@ using ZXing.QrCode;
 using ZXing.SkiaSharp;
 using System.Reactive.Disposables;
 using System.Collections.Generic;
+using System.Windows.Input;
+using System.Collections.ObjectModel;
 
 namespace WalletWasabi.Fluent.ViewModels.Dialogs;
 
@@ -32,47 +34,68 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 
 	private static readonly Lazy<CaptureDevices> CaptureDevices = new(() => new CaptureDevices());
 
-    private static readonly Lazy<IReadOnlyList<MyCaptureDeviceDescriptor>> AvailableDevicesAndCharacteristics = new(() =>
-        {
-			return Dispatcher.UIThread.Invoke<IReadOnlyList<MyCaptureDeviceDescriptor>>(() => {
-				try 
-				{
-					Console.WriteLine("Get capture devices (one-time)");
-					var devices = CaptureDevices.Value;
+	public ObservableCollection<CaptureDeviceDescriptor?> DeviceList { get; } = new();
 
-					Console.WriteLine("Enumerate descriptors (one-time)");
-					var devicesAndCharacteristics = devices
-						.EnumerateDescriptors()
-						.Where(d => d.Characteristics.Length >= 1)
-						.Where(static d => d is not VideoForWindowsDeviceDescriptor)
-						.SelectMany(static d => d.Characteristics, static (d, c) => new MyCaptureDeviceDescriptor(d, c))
-						.ToArray();
-
-					foreach (var item in devicesAndCharacteristics)
-					{
-						Logger.LogDebug($"Cached device: {item.Descriptor.Name} with characteristic: {item.Characteristic}");
-					}
-
-					return devicesAndCharacteristics;
-				}
-				catch (Exception ex)
-				{
-					Logger.LogError("Failed to enumerate capture devices (one-time): " + ex.Message);
-					return Array.Empty<MyCaptureDeviceDescriptor>().AsReadOnly();
-				}
-			});
-        }, LazyThreadSafetyMode.ExecutionAndPublication);
-
-	public static CaptureDeviceDescriptor? Device { get; set; }
-
-	// Constructed capture device.
-    private static CaptureDevice? CaptureDevice;
+	public CaptureDeviceDescriptor? Device { get; set; }
+	public ObservableCollection<VideoCharacteristics> CharacteristicsList { get; } = new();
+	public VideoCharacteristics? Characteristics { get; set; }
 
     private static Action<SKBitmap?> UpdateQrImageFn = (bitmap) => { };
+
+	public ICommand OpenCommand { get; }
+
+	public ICommand StartCaptureCommand { get; }
+
+	private CaptureDevice? _captureDevice;
 
 	public ShowQrCameraDialogViewModel(UiContext context, Network network) : base(context)
     {
         _network = network;
+		OpenCommand = ReactiveCommand.Create(() =>
+		{
+            Console.WriteLine("Opened()");
+
+            // Enumerate capture devices:
+            var devices = new CaptureDevices();
+
+            // Store device list into the combo box.
+            DeviceList.Clear();
+
+            Console.WriteLine("Opened(): Enumerate descriptors");
+            foreach (var descriptor in devices.EnumerateDescriptors().
+                // You could filter by device type and characteristics.
+                //Where(d => d.DeviceType == DeviceTypes.DirectShow).  // Only DirectShow device.
+                Where(d => d.Characteristics.Length >= 1))             // One or more valid video characteristics.
+            {
+				Console.WriteLine("Opened(): Adding device");
+                DeviceList.Add(descriptor);
+            }
+
+			Console.WriteLine("Opened(): Assign device");
+            Device = DeviceList.FirstOrDefault();
+
+            // Or, you could choice from device descriptor:
+            CharacteristicsList.Clear();
+
+			if (Device is {} device) 
+			{
+				foreach (var characteristics in device.Characteristics)
+				{
+					if (characteristics.PixelFormat != PixelFormats.Unknown)
+					{
+						CharacteristicsList.Add(characteristics);
+					}
+				}
+
+				Characteristics = CharacteristicsList.FirstOrDefault();
+
+				Console.WriteLine("Opened(): Assign char");
+				Characteristics = Device?.Characteristics?.FirstOrDefault();
+			}
+
+            Console.WriteLine("Opened(-)");
+		});
+		StartCaptureCommand = ReactiveCommand.CreateFromTask(RunCameraLoopAsync);
 
         SetupCancel(enableCancel: true, enableCancelOnEscape: true, enableCancelOnPressed: true);
     }
@@ -83,11 +106,6 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 
         _cts = new CancellationTokenSource();
 		UpdateQrImageFn = (bitmap) => { QrImage = bitmap; };
-
-		_ = Dispatcher.UIThread.InvokeAsync(async () => 
-		{
-			await RunCameraLoopAsync(_cts.Token);
-		});
     }
 
     protected override void OnNavigatedFrom(bool isInHistory)
@@ -97,10 +115,10 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 		// Fire and forget.
 		_ = Dispatcher.UIThread.InvokeAsync(async () => 
 		{
-			if (CaptureDevice is not null) 
+			if (_captureDevice is not null) 
 			{
 				Console.WriteLine("Stopping...");
-				await CaptureDevice.StopAsync();
+				await _captureDevice.StopAsync();
 				Console.WriteLine("Stopped");
 			}
 		});
@@ -116,35 +134,15 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
     {
         try
         {
-            // Access the lazy field → enumeration happens at most once in the app lifetime
-            var devicesAndCharacteristics = AvailableDevicesAndCharacteristics.Value;
-
-            if (devicesAndCharacteristics.Count == 0)
-            {
-                throw new InvalidOperationException("No camera devices available.");
-            }
-
-            // Pick the first available (you could add UI to select if multiple)
-            var selected = devicesAndCharacteristics[0];
-
-			if (selected.Characteristic.PixelFormat == PixelFormats.Unknown)
+			if (Device is {} device && Characteristics is {} characteristics) 
 			{
-				throw new InvalidOperationException("Unknown pixel format.");
-			}
-
-			if (Device is null) 
-			{
-				Device = selected.Descriptor;
-				Console.WriteLine("OpenAsync");
-				CaptureDevice = await selected.Descriptor.OpenAsync(
-					selected.Characteristic,
-					ct: cancellationToken,
-					pixelBufferArrived: OnPixelBufferArrivedAsync
-				);
+				Console.WriteLine($"RunCameraLoopAsync: Opening: {device.Name}");
+				Console.WriteLine($"RunCameraLoopAsync: -- {characteristics}");
+				_captureDevice = await device.OpenAsync(characteristics, OnPixelBufferArrivedAsync, CancellationToken.None);
 			}
 
 			Console.WriteLine("Starting");
-			await CaptureDevice!.StartAsync(cancellationToken);
+			await _captureDevice!.StartAsync(cancellationToken);
 			Console.WriteLine("Started");
         }
         catch (OperationCanceledException)
@@ -160,7 +158,7 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
     }
 
 
-    private static async Task OnPixelBufferArrivedAsync(PixelBufferScope bufferScope)
+    private async Task OnPixelBufferArrivedAsync(PixelBufferScope bufferScope)
     {
 		Console.WriteLine("OnPixelBufferArrivedAsync...");
 

@@ -25,6 +25,16 @@
         <ProgressRing IsIndeterminate="True" Height="100" IsVisible="{Binding QrImage,Converter={x:Static ObjectConverters.IsNull}}" />
         <Image Name="qrImage" Source="{Binding QrImage}"
                IsVisible="{Binding QrImage,Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+        <StackPanel>
+          <Button BorderBrush="White" BorderThickness="1"
+                  Content="Open"
+                  Command="{Binding OpenCommand}" />
+
+          <Button BorderBrush="White" BorderThickness="1"
+                  Content="Start capture"
+                  Command="{Binding StartCaptureCommand}" />
+        </StackPanel>
       </Panel>
     </DockPanel>
 
