@@ -1,7 +1,6 @@
 using Avalonia.Threading;
 using NBitcoin;
 using System.Reactive.Linq;
-using WalletWasabi.Fluent.Models.UI;
 using WalletWasabi.Fluent.ViewModels.Dialogs.Base;
 using FlashCap;
 using FlashCap.Devices;
@@ -31,13 +30,15 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 
     private CancellationTokenSource? _cts;
 
+	private static readonly Lazy<CaptureDevices> CaptureDevices = new(() => new CaptureDevices());
+
     private static readonly Lazy<IReadOnlyList<MyCaptureDeviceDescriptor>> AvailableDevicesAndCharacteristics = new(() =>
         {
 			return Dispatcher.UIThread.Invoke<IReadOnlyList<MyCaptureDeviceDescriptor>>(() => {
 				try 
 				{
 					Console.WriteLine("Get capture devices (one-time)");
-					var devices = new CaptureDevices();
+					var devices = CaptureDevices.Value;
 
 					Console.WriteLine("Enumerate descriptors (one-time)");
 					var devicesAndCharacteristics = devices
@@ -83,7 +84,10 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
         _cts = new CancellationTokenSource();
 		UpdateQrImageFn = (bitmap) => { QrImage = bitmap; };
 
-		_ = RunCameraLoopAsync(_cts.Token); // fire-and-forget
+		_ = Dispatcher.UIThread.InvokeAsync(async () => 
+		{
+			await RunCameraLoopAsync(_cts.Token);
+		});
     }
 
     protected override void OnNavigatedFrom(bool isInHistory)
@@ -128,23 +132,20 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
 				throw new InvalidOperationException("Unknown pixel format.");
 			}
 
-			await Dispatcher.UIThread.InvokeAsync(async () =>
+			if (Device is null) 
 			{
-				if (Device is null) 
-				{
-					Device = selected.Descriptor;
-					Console.WriteLine("OpenAsync");
-					CaptureDevice = await selected.Descriptor.OpenAsync(
-						selected.Characteristic,
-						ct: cancellationToken,
-						pixelBufferArrived: OnPixelBufferArrivedAsync
-					);
-				}
+				Device = selected.Descriptor;
+				Console.WriteLine("OpenAsync");
+				CaptureDevice = await selected.Descriptor.OpenAsync(
+					selected.Characteristic,
+					ct: cancellationToken,
+					pixelBufferArrived: OnPixelBufferArrivedAsync
+				);
+			}
 
-            	Console.WriteLine("Starting");
-            	await CaptureDevice!.StartAsync(cancellationToken);
-				Console.WriteLine("Started");
-			});
+			Console.WriteLine("Starting");
+			await CaptureDevice!.StartAsync(cancellationToken);
+			Console.WriteLine("Started");
         }
         catch (OperationCanceledException)
         {
@@ -153,18 +154,16 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
         catch (Exception ex)
         {
             Console.WriteLine($"Camera error: {ex.Message}");
-
-            Dispatcher.UIThread.Post(async () =>
-            {
-                Close();
-                await ShowErrorAsync(Title, ex.Message, "Something went wrong", NavigationTarget.CompactDialogScreen);
-            });
+			Close();
+			await ShowErrorAsync(Title, ex.Message, "Something went wrong", NavigationTarget.CompactDialogScreen);
         } 
     }
 
 
     private static async Task OnPixelBufferArrivedAsync(PixelBufferScope bufferScope)
     {
+		Console.WriteLine("OnPixelBufferArrivedAsync...");
+
         ////////////////////////////////////////////////
         // Pixel buffer has arrived.
         // NOTE: Perhaps this thread context is NOT UI thread.
@@ -201,13 +200,13 @@ public partial class ShowQrCameraDialogViewModel : DialogViewModelBase<string?>
         bufferScope.ReleaseNow();
     }
 
-    private string Decode(PixelBufferScope scope)
-    {
-        using var bitmap = SKBitmap.Decode(scope.Buffer.ReferImage());
-        var source = new SKBitmapLuminanceSource(bitmap);
-        var binary = new BinaryBitmap(new HybridBinarizer(source));
-        return _decoder.decode(binary)?.Text ?? "";
-    }
+    // private string Decode(PixelBufferScope scope)
+    // {
+    //     using var bitmap = SKBitmap.Decode(scope.Buffer.ReferImage());
+    //     var source = new SKBitmapLuminanceSource(bitmap);
+    //     var binary = new BinaryBitmap(new HybridBinarizer(source));
+    //     return _decoder.decode(binary)?.Text ?? "";
+    // }
 
     // Helper record to hold what we need (adjust based on actual types in FlashCap)
     private record MyCaptureDeviceDescriptor(CaptureDeviceDescriptor Descriptor, VideoCharacteristics Characteristic);
