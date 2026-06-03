@@ -41,7 +41,7 @@
             <!-- Send button -->
             <SubActionButton Content="Send"
                              Command="{Binding DefaultSendCommand}"
-                             IsVisible="{Binding IsSendButtonVisible}"
+                             
                              Icon="{StaticResource wallet_action_send}">
               <SubActionButton.SubCommands>
                 <UICommandCollection>
