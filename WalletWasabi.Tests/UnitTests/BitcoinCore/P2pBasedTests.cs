@@ -54,6 +54,7 @@ public class P2pBasedTests
 			node.Behaviors.Add(new P2pBehavior(mempoolService));
 			node.VersionHandshake();
 
+			// VersionHandshake does not wait for the handshake to finish. Once NBitcoin 10.0.7 is released, this delay can be removed.
 			await Task.Delay(3000);
 
 			using Key k = new();
