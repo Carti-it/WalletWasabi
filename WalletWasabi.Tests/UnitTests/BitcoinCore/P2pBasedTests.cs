@@ -28,6 +28,7 @@ public class P2pBasedTests
 		Console.WriteLine($"==== Run #1 ====");
 		string dir = await Common.GetEmptyWorkDirAsync();
 
+		var eventBus = TestNodeBuilder.EventBus;
 		CoreNode coreNode = await TestNodeBuilder.CreateAsync();
 
 		using var node = await coreNode.CreateNewP2pNodeAsync();
@@ -47,7 +48,7 @@ public class P2pBasedTests
 			await transactionStore.InitializeAsync(CancellationToken.None);
 
 			Console.WriteLine($"MempoolNotifiesAsync - 3rd");
-			using FilterStore filterStore = new(Path.Combine(dir, "indexStore"), network, filterHeaderChain, TestNodeBuilder.EventBus);
+			using var filterStore = new FilterStore(Path.Combine(dir, "indexStore"), network, filterHeaderChain, eventBus);
 			await filterStore.InitializeAsync(new Height.ChainHeight(0u), CancellationToken.None);
 
 			MempoolService mempoolService = coreNode.MempoolService;
@@ -65,7 +66,6 @@ public class P2pBasedTests
 			const int TransactionsCount = 3;
 
 			Console.WriteLine($"MempoolNotifiesAsync - 5th");
-			var eventBus = TestNodeBuilder.EventBus;
 			using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(4));
 			var awaiter = eventBus.WaitForAsync<NewTransactionInMempool, SmartTransaction>(TransactionsCount, e => e.Transaction, cts.Token);
 

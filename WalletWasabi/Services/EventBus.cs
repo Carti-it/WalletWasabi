@@ -21,8 +21,15 @@ public class EventBus
 	private readonly SubscriptionRegistry _subscriptions = new();
 	private readonly Lock _syncObj = new();
 
+	public EventBus()
+	{
+		Console.WriteLine("EventBus.constructor");
+	}
+
 	public IDisposable Subscribe<TEvent>(Action<TEvent> action) where TEvent : notnull
 	{
+		Console.WriteLine("EventBus.Subscribe");
+
 		lock (_syncObj)
 		{
 			if (!_subscriptions.ContainsKey(typeof(TEvent)))
@@ -54,6 +61,8 @@ public class EventBus
 
 	public void Publish<TEvent>(TEvent eventItem) where TEvent : notnull
 	{
+		Console.WriteLine($"EventBus.Publish - eventItem={eventItem}");
+
 		Subscription[] allSubscriptions;
 		lock (_syncObj)
 		{
