@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using WalletWasabi.Blockchain.Mempool;
 using WalletWasabi.Blockchain.Transactions;
 using WalletWasabi.Extensions;
-using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
 
 namespace WalletWasabi.BitcoinP2p;
@@ -38,13 +37,11 @@ public class P2pBehavior : NodeBehavior
 
 	protected override void AttachCore()
 	{
-		Console.WriteLine($"P2pBehavior.AttachCore");
 		AttachedNode.MessageReceived += AttachedNode_MessageReceivedAsync;
 	}
 
 	protected override void DetachCore()
 	{
-		Console.WriteLine($"P2pBehavior.DetachCore");
 		AttachedNode.MessageReceived -= AttachedNode_MessageReceivedAsync;
 		PeerFeeFilters.TryRemove(AttachedNode, out _);
 	}
@@ -53,8 +50,6 @@ public class P2pBehavior : NodeBehavior
 	{
 		try
 		{
-			Console.WriteLine($"P2pBehavior.MessageReceived: Received {message.Message} from {node} (payload={message.Message.Payload})");
-
 			if (message.Message.Payload is GetDataPayload getDataPayload)
 			{
 				await ProcessGetDataAsync(node, getDataPayload).ConfigureAwait(false);

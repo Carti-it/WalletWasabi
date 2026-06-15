@@ -25,7 +25,6 @@ public class P2pBasedTests
 	[Fact]
 	public async Task MempoolNotifiesAsync()
 	{
-		Console.WriteLine($"==== Run #1 ====");
 		string dir = await Common.GetEmptyWorkDirAsync();
 
 		var eventBus = new EventBus();
@@ -35,31 +34,26 @@ public class P2pBasedTests
 
 		try
 		{
-			Console.WriteLine($"MempoolNotifiesAsync - 1st");
 			var network = coreNode.Network;
 			var rpc = coreNode.RpcClient;
 
 			var walletName = "wallet";
 			await rpc.CreateWalletAsync(walletName);
 
-			Console.WriteLine($"MempoolNotifiesAsync - 2nd");
 			FilterHeaderChain filterHeaderChain = new();
 			using AllTransactionStore transactionStore = new(Path.Combine(dir, "transactionStore"), network);
 			await transactionStore.InitializeAsync(CancellationToken.None);
 
-			Console.WriteLine($"MempoolNotifiesAsync - 3rd");
 			using var filterStore = new FilterStore(Path.Combine(dir, "indexStore"), network, filterHeaderChain, eventBus);
 			await filterStore.InitializeAsync(new Height.ChainHeight(0u), CancellationToken.None);
 
 			MempoolService mempoolService = coreNode.MempoolService;
 
-			Console.WriteLine($"MempoolNotifiesAsync - 4th");
 			await rpc.GenerateAsync(blockCount: 101);
 
 			node.Behaviors.Add(new P2pBehavior(mempoolService));
 			node.VersionHandshake();
 
-			Console.WriteLine($"MempoolNotifiesAsync - Wait 3 seconds");
 			await Task.Delay(3000);
 
 			using Key k = new();
@@ -68,29 +62,23 @@ public class P2pBasedTests
 			// Number of transactions to send.
 			const int TransactionsCount = 3;
 
-			Console.WriteLine($"MempoolNotifiesAsync - 5th");
 			using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(4));
 			var awaiter = eventBus.WaitForAsync<NewTransactionInMempool, SmartTransaction>(TransactionsCount, e => e.Transaction, cts.Token);
 
-			Console.WriteLine($"MempoolNotifiesAsync - 6th");
 			Task<uint256>[] txHashesTasks = new Task<uint256>[TransactionsCount];
 
 			// Add to the batch 3 RPC commands: Send 1 coin to the same address.
 			for (int i = 0; i < TransactionsCount; i++)
 			{
-				Console.WriteLine($"MempoolNotifiesAsync - 7th - {i}");
 				Task<uint256> txidTask = rpc.SendToAddressAsync(address, Money.Coins(1));
 				txHashesTasks[i] = txidTask;
 			}
 
-			Console.WriteLine($"MempoolNotifiesAsync - 8th");
 			uint256[] txHashes = await Task.WhenAll(txHashesTasks);
 
-			Console.WriteLine($"MempoolNotifiesAsync - 9th");
 			// Wait until the mempool service receives all the sent transactions.
 			IEnumerable<SmartTransaction> mempoolSmartTxs = await awaiter;
 
-			Console.WriteLine($"MempoolNotifiesAsync - 10th");
 			// Check that all the received transaction hashes are in the set of sent transaction hashes.
 			foreach (SmartTransaction tx in mempoolSmartTxs)
 			{
@@ -113,14 +101,11 @@ public static class EventBusExtensions
 		var completion = new TaskCompletionSource<TResult[]>();
 		var subscription = eventBus.Subscribe<TEvent>(e =>
 		{
-			Console.WriteLine($"EventBusExtensions.WaitForAsync - event {e} received");
 			events.Enqueue(e);
 
-			Console.WriteLine($"EventBusExtensions.WaitForAsync - events: {events.Count} / {count}");
 
 			if (events.Count == count)
 			{
-				Console.WriteLine($"EventBusExtensions.WaitForAsync - set result");
 				completion.SetResult(events.Select(conv).ToArray());
 			}
 		});
