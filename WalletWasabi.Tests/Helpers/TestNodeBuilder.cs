@@ -16,6 +16,15 @@ public static class TestNodeBuilder
 {
 	public static readonly EventBus EventBus = new();
 
+	public static async Task<CoreNode> CreateAsync(EventBus eventBus, [CallerFilePath] string callerFilePath = "", [CallerMemberName] string callerMemberName = "", string additionalFolder = "")
+	{
+		var dataDir = Path.Combine(Common.GetWorkDir(callerFilePath, callerMemberName), additionalFolder);
+		var mempoolService = new MempoolService(eventBus);
+		var nodeParameters = CreateDefaultCoreNodeParams(mempoolService, dataDir);
+
+		return await CoreNode.CreateAsync(nodeParameters, CancellationToken.None).ConfigureAwait(false);
+	}
+
 	public static async Task<CoreNode> CreateAsync([CallerFilePath] string callerFilePath = "", [CallerMemberName] string callerMemberName = "", string additionalFolder = "")
 	{
 		var dataDir = Path.Combine(Common.GetWorkDir(callerFilePath, callerMemberName), additionalFolder);

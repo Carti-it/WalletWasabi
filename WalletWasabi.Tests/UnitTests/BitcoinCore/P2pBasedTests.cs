@@ -28,8 +28,8 @@ public class P2pBasedTests
 		Console.WriteLine($"==== Run #1 ====");
 		string dir = await Common.GetEmptyWorkDirAsync();
 
-		var eventBus = TestNodeBuilder.EventBus;
-		CoreNode coreNode = await TestNodeBuilder.CreateAsync();
+		var eventBus = new EventBus();
+		CoreNode coreNode = await TestNodeBuilder.CreateAsync(eventBus);
 
 		using var node = await coreNode.CreateNewP2pNodeAsync();
 
