@@ -59,6 +59,9 @@ public class P2pBasedTests
 			node.Behaviors.Add(new P2pBehavior(mempoolService));
 			node.VersionHandshake();
 
+			Console.WriteLine($"MempoolNotifiesAsync - Wait 3 seconds");
+			await Task.Delay(3000);
+
 			using Key k = new();
 			var address = k.PubKey.GetAddress(ScriptPubKeyType.Segwit, network);
 

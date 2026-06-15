@@ -38,11 +38,13 @@ public class P2pBehavior : NodeBehavior
 
 	protected override void AttachCore()
 	{
+		Console.WriteLine($"P2pBehavior.AttachCore");
 		AttachedNode.MessageReceived += AttachedNode_MessageReceivedAsync;
 	}
 
 	protected override void DetachCore()
 	{
+		Console.WriteLine($"P2pBehavior.DetachCore");
 		AttachedNode.MessageReceived -= AttachedNode_MessageReceivedAsync;
 		PeerFeeFilters.TryRemove(AttachedNode, out _);
 	}
@@ -51,7 +53,7 @@ public class P2pBehavior : NodeBehavior
 	{
 		try
 		{
-			Logger.LogDebug($"P2pBehavior.MessageReceived: Received {message.Message} from {node} (payload={message.Message.Payload})");
+			Console.WriteLine($"P2pBehavior.MessageReceived: Received {message.Message} from {node} (payload={message.Message.Payload})");
 
 			if (message.Message.Payload is GetDataPayload getDataPayload)
 			{
