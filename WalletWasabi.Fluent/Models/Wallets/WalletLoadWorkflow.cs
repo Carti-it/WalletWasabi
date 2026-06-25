@@ -110,7 +110,7 @@ public partial class WalletLoadWorkflow
 
 		services.EventBus.AsObservable<BlockDownloaded>()
 			.ObserveOn(RxApp.MainThreadScheduler)
-			.Subscribe(x => _downloadedBlocks = _downloadedBlocks + 1)
+			.Subscribe(x => _downloadedBlocks += 1)
 			.DisposeWith(_disposables);
 
 		LoadCompleted = services.EventBus.AsObservable<WalletLoaded>()
