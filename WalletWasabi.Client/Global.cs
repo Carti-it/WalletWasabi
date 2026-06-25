@@ -744,9 +744,9 @@ public class Global
 		return result;
 	}
 
-	public ImmutableArray<Node> GetNodes() => _nodeConnectionManager.Nodes;
+	public ImmutableArray<Node> GetPeerNodes() => _nodeConnectionManager.Nodes;
+	public int GetPeerCount() => GetPeerNodes().Length;
 	public uint GetBlockHeadersTipHeight() => (uint)(_blockHeaders.Tip?.Height ?? 0);
-	public int GetPeerCount() => _nodeConnectionManager.Nodes.Length;
 	public async Task DisposeAsync()
 	{
 		// Dispose method may be called just once.
