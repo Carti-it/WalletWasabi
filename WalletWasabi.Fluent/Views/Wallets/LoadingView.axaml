@@ -125,7 +125,8 @@
                   <PathIcon Data="{StaticResource checkmark_circle}" Width="14" Height="14"
                             Foreground="{DynamicResource SystemAccentColor}" IsVisible="{Binding IsComplete}" />
                   <PathIcon Data="{StaticResource arrow_download_regular}" Width="14" Height="14"
-                            Foreground="{StaticResource SyncProgressOrangeBrush}" IsVisible="{Binding !IsComplete}" />
+                            Foreground="{StaticResource SyncProgressOrangeBrush}" IsVisible="{Binding !IsComplete}"
+                            ToolTip.Tip="Attempting to connect to a maximum of 12 peers to retrieve blockchain data." />
                 </Panel>
               </StackPanel>
             </Border>
@@ -154,7 +155,8 @@
                   <PathIcon Data="{StaticResource checkmark_circle}" Width="14" Height="14"
                             Foreground="{DynamicResource SystemAccentColor}" IsVisible="{Binding IsComplete}" />
                   <PathIcon Data="{StaticResource arrow_download_regular}" Width="14" Height="14"
-                            Foreground="{StaticResource SyncProgressOrangeBrush}" IsVisible="{Binding !IsComplete}" />
+                            Foreground="{StaticResource SyncProgressOrangeBrush}" IsVisible="{Binding !IsComplete}"
+                            ToolTip.Tip="Block headers are being downloaded. Please wait." />
                 </Panel>
               </StackPanel>
             </Border>
@@ -183,7 +185,8 @@
                   <PathIcon Data="{StaticResource checkmark_circle}" Width="14" Height="14"
                             Foreground="{DynamicResource SystemAccentColor}" IsVisible="{Binding IsComplete}" />
                   <PathIcon Data="{StaticResource arrow_download_regular}" Width="14" Height="14"
-                            Foreground="{StaticResource SyncProgressOrangeBrush}" IsVisible="{Binding !IsComplete}" />
+                            Foreground="{StaticResource SyncProgressOrangeBrush}" IsVisible="{Binding !IsComplete}"
+                            ToolTip.Tip="Compact filter headers are being downloaded. Please wait." />
                 </Panel>
               </StackPanel>
             </Border>
@@ -212,7 +215,8 @@
                   <PathIcon Data="{StaticResource checkmark_circle}" Width="14" Height="14"
                             Foreground="{DynamicResource SystemAccentColor}" IsVisible="{Binding IsComplete}" />
                   <PathIcon Data="{StaticResource arrow_download_regular}" Width="14" Height="14"
-                            Foreground="{StaticResource SyncProgressOrangeBrush}" IsVisible="{Binding !IsComplete}" />
+                            Foreground="{StaticResource SyncProgressOrangeBrush}" IsVisible="{Binding !IsComplete}"
+                            ToolTip.Tip="Compact filters are being downloaded. Please wait." />
                 </Panel>
               </StackPanel>
             </Border>
@@ -241,7 +245,8 @@
                   <PathIcon Data="{StaticResource checkmark_circle}" Width="14" Height="14"
                             Foreground="{DynamicResource SystemAccentColor}" IsVisible="{Binding IsComplete}" />
                   <PathIcon Data="{StaticResource arrow_download_regular}" Width="14" Height="14"
-                            Foreground="{StaticResource SyncProgressOrangeBrush}" IsVisible="{Binding !IsComplete}" />
+                            Foreground="{StaticResource SyncProgressOrangeBrush}" IsVisible="{Binding !IsComplete}"
+                            ToolTip.Tip="Bitcoin blocks are being downloaded. Please wait." />
                 </Panel>
               </StackPanel>
             </Border>
