@@ -30,10 +30,10 @@ public class BlinkOnChangeBehavior : AttachedToVisualTreeBehavior<Control>
 
 		return this.GetObservable(ValueProperty)
 			.Skip(1)
-			.Subscribe(_ => Blink());
+			.Subscribe(_ => BlinkAsync());
 	}
 
-	private async void Blink()
+	private async void BlinkAsync()
 	{
 		var control = AssociatedObject;
 		if (control is null)
