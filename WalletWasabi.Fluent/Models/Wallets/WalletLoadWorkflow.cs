@@ -35,7 +35,6 @@ public partial class WalletLoadWorkflow
 	private readonly IServices _services;
 	private readonly CompositeDisposable _disposables = new();
 	private readonly Wallet _wallet;
-	private uint _peers;
 	private uint _blockHeadersTip;
 	private uint _filterHeadersTip;
 	private uint _compactFiltersTip;
@@ -57,7 +56,6 @@ public partial class WalletLoadWorkflow
 		var tipHeight = services.GetTipHeight();
 		var blockHeadersTip = services.GetBlockHeadersTipHeight();
 		var serverTipHeight = services.GetServerTipHeight();
-		var peerCount = services.GetPeerCount();
 
 		// Store initial values for progress calculation
 		_initialBlockHeaders = blockHeadersTip;
@@ -67,26 +65,15 @@ public partial class WalletLoadWorkflow
 		_blockHeadersTip = blockHeadersTip;
 		_filterHeadersTip = tipHeight;
 		_compactFiltersTip = tipHeight;
-		_peers = (uint)peerCount;
 		_downloadedBlocks = 0;
 
 		_progress.OnNext(new WalletLoadProgress(
 			ChainTip: serverTipHeight,
-			Peers: new SyncProgressCardModel(0, _peers, TargetPeers),
+			Peers: new SyncProgressCardModel(0, (uint)services.GetPeerCount(), TargetPeers),
 			BlockHeaders: new SyncProgressCardModel(_initialBlockHeaders, _initialBlockHeaders, serverTipHeight),
 			FilterHeaders: new SyncProgressCardModel(_initialFilterHeaders, _initialFilterHeaders, serverTipHeight),
 			CompactFilters: new SyncProgressCardModel(_initialCompactFilters, _initialCompactFilters, serverTipHeight),
 			Blocks: new SyncProgressCardModel(0, 0, 0)));
-
-		services.EventBus.AsObservable<P2pNodeAdded>()
-			.ObserveOn(RxApp.MainThreadScheduler)
-			.Subscribe(_ => _peers++)
-			.DisposeWith(_disposables);
-
-		services.EventBus.AsObservable<P2pNodeRemoved>()
-			.ObserveOn(RxApp.MainThreadScheduler)
-			.Subscribe(_ => _peers--)
-			.DisposeWith(_disposables);
 
 		services.EventBus.AsObservable<BlockHeadersTipChanged>()
 			.ObserveOn(RxApp.MainThreadScheduler)
@@ -185,7 +172,7 @@ public partial class WalletLoadWorkflow
 
 		_progress.OnNext(new WalletLoadProgress(
 			ChainTip: tipHeight,
-			Peers: new SyncProgressCardModel(0, _peers, TargetPeers),
+			Peers: new SyncProgressCardModel(0, (uint)_services.GetPeerCount(), TargetPeers),
 			BlockHeaders: new SyncProgressCardModel(_initialBlockHeaders, _blockHeadersTip, tipHeight),
 			FilterHeaders: new SyncProgressCardModel(_initialFilterHeaders, _filterHeadersTip, tipHeight),
 			CompactFilters: new SyncProgressCardModel(_initialCompactFilters, _compactFiltersTip, tipHeight),
