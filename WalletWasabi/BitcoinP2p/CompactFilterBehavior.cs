@@ -49,7 +49,10 @@ public class CompactFilterBehavior(
 		AttachedNode.StateChanged -= OnStateChanged;
 		AttachedNode.MessageReceived -= OnMessageReceived;
 
-		ReleaseAssignments();
+		lock (_lock)
+		{
+			ReleaseAssignmentsNoLock();
+		}
 	}
 
 	public override object Clone() =>
@@ -398,19 +401,6 @@ public class CompactFilterBehavior(
 
 		// Disconnect the node
 		node.DisconnectAsync(reason);
-	}
-
-	private void ReleaseAssignments()
-	{
-		_lock.Enter();
-		try
-		{
-			ReleaseAssignmentsNoLock();
-		}
-		finally
-		{
-			_lock.Exit();
-		}
 	}
 
 	private void ReleaseAssignmentsNoLock()
