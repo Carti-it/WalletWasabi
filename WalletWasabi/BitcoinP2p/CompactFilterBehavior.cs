@@ -108,29 +108,20 @@ public class CompactFilterBehavior(
 			return;
 		}
 
-		if (!_lock.TryEnter())
-		{
-			return;
-		}
-
-		try
+		lock (_lock)
 		{
 			if (_assignedHeaderRange is { } assignedHeaderRange &&
-			    message.Message.Payload is CompactFilterHeadersPayload {FilterType: FilterType.Basic} cfHeaders)
+				message.Message.Payload is CompactFilterHeadersPayload { FilterType: FilterType.Basic } cfHeaders)
 			{
 				HandleFilterHeaderMessageNoLock(node, cfHeaders, assignedHeaderRange);
 				return;
 			}
 
 			if (_assignedFilterRange is { } assignedFilterRange &&
-			    message.Message.Payload is CompactFilterPayload {FilterType: FilterType.Basic} filterPayload)
+				message.Message.Payload is CompactFilterPayload { FilterType: FilterType.Basic } filterPayload)
 			{
 				HandleFilterMessageNoLock(node, filterPayload, assignedFilterRange);
 			}
-		}
-		finally
-		{
-			_lock.Exit();
 		}
 	}
 
