@@ -305,11 +305,6 @@ public class CompactFilterBehavior(
 
 	private void TrySync(Node node)
 	{
-		if (!IsNodeInValidState(node))
-		{
-			return;
-		}
-
 		if (!_lock.TryEnter())
 		{
 			return;
@@ -317,8 +312,7 @@ public class CompactFilterBehavior(
 
 		try
 		{
-			TrySyncHeadersNoLock(node);
-			TrySyncFiltersNoLock(node);
+			TrySyncNoLock(node);
 		}
 		finally
 		{
