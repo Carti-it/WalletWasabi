@@ -131,7 +131,7 @@ public class AddressParserTests
 	/// Inside a BIP 21 URI the whole pj value is percent-encoded. <see cref="AddressParser"/> must hand back the decoded URL and fragment intact.
 	/// </summary>
 	[Fact]
-	public void AddressParser_PreservesBip77PjUrlFragmentParameters()
+	public void PreservesBip77PjUrlFragmentParameters()
 	{
 		string encodedPjUrl = Uri.EscapeDataString(Bip77PjUrl);
 		string bip21 = $"bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=0.00010727&pj={encodedPjUrl}";
@@ -147,7 +147,7 @@ public class AddressParserTests
 	/// <c>pjos=0</c> (output substitution disabled) must survive parsing so the sender can rebuild a faithful BIP 21.
 	/// </summary>
 	[Fact]
-	public void AddressParser_PreservesPjosParameter()
+	public void PreservesPjosParameter()
 	{
 		string bip21 = $"bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=1&pj={Uri.EscapeDataString(Bip77PjUrl)}&pjos=0";
 
@@ -177,7 +177,7 @@ public class AddressParserTests
 
 	/// <summary>BIP 21 without a <c>pj</c> parameter yields no payjoin endpoint.</summary>
 	[Fact]
-	public void AddressParser_NoPjParameter_YieldsNullEndpoint()
+	public void NoPjParameter_YieldsNullEndpoint()
 	{
 		var result = AddressParser.Parse("bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?amount=1", Network.TestNet).Value;
 
