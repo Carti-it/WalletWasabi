@@ -4,12 +4,15 @@ namespace WalletWasabi.Payjoin;
 
 /// <summary>
 /// Textual helpers for BIP 77 <c>pj=</c> endpoint URLs.
-/// A BIP 77 endpoint is a directory URL whose fragment carries uppercase bech32 parameters
-/// delimited by <c>-</c> (or legacy <c>+</c>): <c>RK1…</c> (receiver key), <c>OH1…</c>
-/// (OHTTP keys), <c>EX1…</c> (expiry). The payjoin-ffi <c>PjParam</c> handle exposes none
-/// of these over FFI, so version dispatch and session-dedup keys are derived textually here.
-/// Semantic parsing and validation stay in payjoin-ffi.
 /// </summary>
+/// <remarks>
+/// An example of a BIP 77 endpoint URL is here:
+/// <c>bitcoin:tb1q6q6de88mj8qkg0q5lupmpfexwnqjsr4d2gvx2p?amount=0.00666666&pjos=0&pj=HTTPS://PAYJO.IN/TXJCGKTKXLUUZ%23EX1WKV8CEC-OH1QYPM59NK2LXXS4890SUAXXYT25Z2VAPHP0X7YEYCJXGWAG6UG9ZU6NQ-RK1Q0DJS3VVDXWQQTLQ8022QGXSX7ML9PHZ6EDSF6AKEWQG758JPS2EV</c>
+/// and decoded <c>pj</c> parameter is:
+/// <c>HTTPS://PAYJO.IN/TXJCGKTKXLUUZ#EX1WKV8CEC-OH1QYPM59NK2LXXS4890SUAXXYT25Z2VAPHP0X7YEYCJXGWAG6UG9ZU6NQ-RK1Q0DJS3VVDXWQQTLQ8022QGXSX7ML9PHZ6EDSF6AKEWQG758JPS2EV</c>
+/// where you can notice the <c>#</c> followed by comma separated fragment parameters (like <c>RK1</c> and <c>OH1</c>).
+/// </remarks>
+/// <seealso href="https://github.com/bitcoin/bips/blob/master/bip-0077.md"/>
 public static class Bip77UriParams
 {
 	/// <summary>A pj endpoint is BIP 77 when its fragment carries the receiver-key and OHTTP-keys params.</summary>
@@ -24,7 +27,7 @@ public static class Bip77UriParams
 	{
 		value = null;
 
-		int fragmentStart = pjEndpoint.IndexOf('#');
+		int fragmentStart = pjEndpoint.IndexOf('#', StringComparison.Ordinal);
 		if (fragmentStart < 0 || fragmentStart == pjEndpoint.Length - 1)
 		{
 			return false;
