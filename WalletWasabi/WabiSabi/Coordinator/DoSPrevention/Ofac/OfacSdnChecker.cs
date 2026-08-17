@@ -79,6 +79,8 @@ public class OfacSdnChecker : PeriodicRunner
 
 			if (response.Success)
 			{
+				var outPointsToBan = new List<OutPoint>();
+
 				foreach (var output in response.Outputs)
 				{
 					var address = output.Coin.TxOut.ScriptPubKey.GetDestinationAddress(_network);
@@ -88,9 +90,13 @@ public class OfacSdnChecker : PeriodicRunner
 
 					Logger.LogInfo($"Found UTXO for sanctioned address {address}: {amount} BTC in transaction {txid} at vout {outpoint.N}.");
 				};
+
+				foreach (var outPoint in outPointsToBan)
+				{
+					_prison.CheatingDetected(outPoint, uint256.Zero);
+				}
 			}
 
-			// TODO: Process the list using a Bitcoin full node to find actual UTXOs for the sanctioned addresses, and add them to the prison.
 			Logger.LogInfo($"OFAC sanctions list parsed in {sw.ElapsedMilliseconds} ms. Found {list.Count} sanctioned Bitcoin addresses.");
 		}
 		catch (Exception e)
