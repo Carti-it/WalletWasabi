@@ -98,12 +98,13 @@ public class CoordinatorOutputTests
 		Money? minRegistrableAmount = null,
 		FeeRate? miningFeeRate = null)
 	{
-		var parameters = WabiSabiFactory.CreateRoundParameters(new()
+		var cfg = new WalletWasabi.WabiSabi.Coordinator.WabiSabiConfig()
 		{
 			MinRegistrableAmount = minRegistrableAmount ?? DefaultMinRegistrableAmount,
 			MaxRegistrableAmount = Money.Coins(43_000m),
 			MaxSuggestedAmountBase = Money.Coins(Constants.MaximumNumberOfBitcoins)
-		}) with
+		};
+		var parameters = WabiSabiFactory.CreateRoundParameters(cfg) with
 		{
 			MiningFeeRate = miningFeeRate ?? DefaultMiningFeeRate
 		};
@@ -125,6 +126,6 @@ public class CoordinatorOutputTests
 		var sizeToPayFor = Build(parameters.AllowedOutputAmounts.Min).EstimatedVsize + coordinatorScript.EstimateOutputVsize();
 		var miningFee = parameters.MiningFeeRate.GetFee(sizeToPayFor) + Money.Satoshis(1);
 
-		return (WabiSabiFactory.CreateRound(parameters), Build(inputAmount - miningFee - coordinatorOutputValue), coordinatorScript);
+		return (WabiSabiFactory.CreateRound(cfg, parameters), Build(inputAmount - miningFee - coordinatorOutputValue), coordinatorScript);
 	}
 }

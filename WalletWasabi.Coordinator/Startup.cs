@@ -57,19 +57,16 @@ public class Startup(IConfiguration configuration)
 
 		services.AddControllers();
 
-		var configFilePath = Path.Combine(dataDir, "Config.json");
-		var config = WabiSabiConfig.TryLoadFile(configFilePath) ??
-			throw new InvalidDataException($"Failed to load '{configFilePath}' config.");
+		var configProvider = new WabiSabiConfigProvider(Path.Combine(dataDir, "Config.json"));
+		services.AddSingleton(configProvider);
 
-		services.AddSingleton(config);
-
-		var torSetting = new TorSettings(dataDir,
-			distributionFolderPath: EnvironmentHelpers.GetFullBaseDirectory(),
+		var torSetting = new TorSettings(dataDir, distributionFolderPath: EnvironmentHelpers.GetFullBaseDirectory(),
 			true, TorMode.Enabled, 37155, 37156);
 
 		services.AddSingleton(torSetting);
-
 		services.AddSingleton<IdempotencyRequestCache>();
+
+		var config = configProvider.GetCurrent();
 		services.AddSingleton<IRPCClient>(provider =>
 		{
 		    string host;
@@ -110,8 +107,7 @@ public class Startup(IConfiguration configuration)
 		services.AddSingleton<Warden>(s => new Warden(Path.Combine(dataDir, "Prison.txt")));
 		services.AddSingleton<RoundParametersFactory>(s =>
 		{
-			var config = s.GetRequiredService<WabiSabiConfig>();
-			return (feeRate, maxSuggestedAmount, minInputCountByRound) => RoundParameters.Create(config, feeRate, maxSuggestedAmount);
+			return (config, feeRate, maxSuggestedAmount, minInputCountByRound) => RoundParameters.Create(config, feeRate, maxSuggestedAmount);
 		});
 		services.AddBackgroundService<Arena>();
 
