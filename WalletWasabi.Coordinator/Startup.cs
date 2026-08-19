@@ -1,6 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Timeouts;
@@ -12,6 +9,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NBitcoin;
 using NBitcoin.RPC;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Net.Http;
 using WalletWasabi.BitcoinRpc;
 using WalletWasabi.Cache;
 using WalletWasabi.Coordinator.WabiSabi;
@@ -25,6 +25,7 @@ using WalletWasabi.Serialization;
 using WalletWasabi.Tor;
 using WalletWasabi.WabiSabi.Coordinator;
 using WalletWasabi.WabiSabi.Coordinator.DoSPrevention;
+using WalletWasabi.WabiSabi.Coordinator.DoSPrevention.Ofac;
 using WalletWasabi.WabiSabi.Coordinator.Rounds;
 using WalletWasabi.WebClients.Wasabi;
 
@@ -106,6 +107,9 @@ public class Startup(IConfiguration configuration)
 
 		var network = config.Network;
 		services.AddSingleton(_ => network);
+
+		services.AddSingleton<OfacSdnParser>();
+		services.AddBackgroundService<OfacSdnChecker>();
 
 		services.AddSingleton<Prison>(s => s.GetRequiredService<Warden>().Prison);
 		services.AddBackgroundService<Warden>(s => new Warden(Path.Combine(dataDir, "Prison.txt")));
