@@ -46,9 +46,7 @@ public abstract class PeriodicRunner : BackgroundService
 	/// </summary>
 	public async Task TriggerAndWaitRoundAsync(CancellationToken token)
 	{
-		EventAwaiter<TimeSpan> eventAwaiter = new(
-							h => Tick += h,
-							h => Tick -= h);
+		EventAwaiter<TimeSpan> eventAwaiter = new(h => Tick += h, h => Tick -= h);
 		TriggerRound();
 		await eventAwaiter.WaitAsync(token).ConfigureAwait(false);
 	}

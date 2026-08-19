@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using WalletWasabi.BitcoinRpc;
+using WalletWasabi.Coordinator.Configuration;
 using WalletWasabi.Coordinator.WabiSabi;
 using WalletWasabi.FeeRateEstimation;
 using WalletWasabi.Helpers;
@@ -26,14 +27,18 @@ public class ArenaBuilder
 	/// <param name="rounds">Rounds to initialize <see cref="Arena"/> with.</param>
 	public Arena Create(params Round[] rounds)
 	{
-		TimeSpan period = Period ?? TimeSpan.FromHours(1);
-		Prison prison = Prison ?? WabiSabiFactory.CreatePrison();
-		WabiSabiConfig config = Config ?? new();
-		IRPCClient rpc = Rpc ?? WabiSabiFactory.CreatePreconfiguredRpcClient();
-		RoundParametersFactory roundParametersFactory = RoundParametersFactory ?? CreateRoundParametersFactory(config);
-		FeeRateProvider feeProvider = FeeRateProviders.RpcAsync(rpc);
+		var period = Period ?? TimeSpan.FromHours(1);
+		var prison = Prison ?? WabiSabiFactory.CreatePrison();
+		var config = Config ?? new();
+		var rpc = Rpc ?? WabiSabiFactory.CreatePreconfiguredRpcClient();
+		var roundParametersFactory = RoundParametersFactory ?? CreateRoundParametersFactory(config);
+		var feeProvider = FeeRateProviders.RpcAsync(rpc);
 
-		Arena arena = new(config, rpc, prison, roundParametersFactory, feeProvider, period:period);
+#pragma warning disable CA2000 // Dispose objects before losing scope – The manager does not have a path, so disposing would be a no-op operation. TODO: Add an interface the manager.
+		var wabiSabiConfigProvider = new WabiSabiConfigManager(config);
+#pragma warning restore CA2000 // Dispose objects before losing scope
+
+		Arena arena = new(wabiSabiConfigProvider, rpc, prison, roundParametersFactory, feeProvider, period:period);
 
 		foreach (var round in rounds)
 		{
