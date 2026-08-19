@@ -12,13 +12,6 @@ public record WabiSabiConfig
 	{
 	}
 
-	public WabiSabiConfig(string filePath)
-	{
-		FilePath = filePath;
-	}
-
-	public string? FilePath { get; }
-
 	public Network Network { get; init; } = Network.Main;
 
 	public string MainNetBitcoinRpcUri { get; init; } = $"http://localhost:{Constants.DefaultMainNetBitcoinRpcPort}";
@@ -123,10 +116,6 @@ public record WabiSabiConfig
 	public void MakeNextCoordinatorScriptDirty()
 	{
 		CoordinatorExtPubKeyCurrentDepth++;
-		if (!string.IsNullOrWhiteSpace(FilePath))
-		{
-			ToFile();
-		}
 	}
 
 	public DoSConfiguration GetDoSConfiguration() =>
@@ -170,14 +159,17 @@ public record WabiSabiConfig
 		return scriptTypes.ToImmutableSortedSet();
 	}
 
-	public static WabiSabiConfig? TryLoadFile(string filePath)
+	public static WabiSabiConfig? TryLoadFile(string filePath, out string? sourceJson)
 	{
 		try
 		{
-			using var cfgFile = File.Open(filePath, FileMode.Open, FileAccess.Read);
-			var decoder = JsonDecoder.FromStream(Decode.WabiSabiConfig(filePath));
-			var decodingResult = decoder(cfgFile);
-			return decodingResult.Match(cfg => cfg, error => throw new InvalidOperationException(error));
+			var fileContents = File.ReadAllText(filePath, Encoding.UTF8);
+			var decoder = JsonDecoder.FromString(Decode.WabiSabiConfig());
+			var decodingResult = decoder(fileContents);
+			var result = decodingResult.Match(cfg => cfg, error => throw new InvalidOperationException(error));
+			sourceJson = fileContents;
+
+			return result;
 		}
 		catch (Exception ex)
 		{
@@ -185,23 +177,17 @@ public record WabiSabiConfig
 			Logger.LogWarning(ex);
 
 			var defaultFilePath = Path.ChangeExtension(filePath, ".Default.json");
-			var defaultConfig = new WabiSabiConfig(defaultFilePath);
-			defaultConfig.ToFile();
+			var defaultConfig = new WabiSabiConfig();
+			var json = defaultConfig.EncodeAsJson();
+			File.WriteAllText(defaultFilePath, json, Encoding.UTF8);
 
 			Logger.LogInfo($"Default config was stored to '{defaultFilePath}'. Use the config to start fresh.");
 
+			sourceJson = null;
 			return null;
 		}
 	}
 
 	protected string EncodeAsJson() =>
 		JsonEncoder.ToReadableString(this, Encode.WabiSabiConfig);
-
-	public void ToFile()
-	{
-		if (FilePath is not null)
-		{
-			File.WriteAllText(FilePath, EncodeAsJson(), Encoding.UTF8);
-		}
-	}
 }

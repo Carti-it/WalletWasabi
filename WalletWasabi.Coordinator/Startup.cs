@@ -14,6 +14,8 @@ using System.IO;
 using System.Net.Http;
 using WalletWasabi.BitcoinRpc;
 using WalletWasabi.Cache;
+using WalletWasabi.Coordinator.Configuration;
+using WalletWasabi.Coordinator.Services;
 using WalletWasabi.Coordinator.WabiSabi;
 using WalletWasabi.Discoverability;
 using WalletWasabi.Extensions;
@@ -23,7 +25,6 @@ using WalletWasabi.Logging;
 using WalletWasabi.Models;
 using WalletWasabi.Serialization;
 using WalletWasabi.Tor;
-using WalletWasabi.WabiSabi.Coordinator;
 using WalletWasabi.WabiSabi.Coordinator.DoSPrevention;
 using WalletWasabi.WabiSabi.Coordinator.DoSPrevention.Ofac;
 using WalletWasabi.WabiSabi.Coordinator.Rounds;
@@ -62,19 +63,20 @@ public class Startup(IConfiguration configuration)
 
 		services.AddControllers();
 
-		var configFilePath = Path.Combine(dataDir, "Config.json");
-		var config = WabiSabiConfig.TryLoadFile(configFilePath) ??
-			throw new InvalidDataException($"Failed to load '{configFilePath}' config.");
+#pragma warning disable CA2000 // Dispose objects before losing scope – The manager is disposed using DI.
+		var configProvider = new WabiSabiConfigManager(Path.Combine(dataDir, "Config.json"));
+#pragma warning restore CA2000 // Dispose objects before losing scope
 
-		services.AddSingleton(config);
+		// It's important to register the singleton like this, otherwise it's not owned by the DIC.
+		services.AddSingleton(_ => configProvider);
 
-		var torSetting = new TorSettings(dataDir,
-			wasabiInstallationFolderPath: EnvironmentHelpers.GetFullBaseDirectory(),
+		var torSetting = new TorSettings(dataDir, wasabiInstallationFolderPath: EnvironmentHelpers.GetFullBaseDirectory(),
 			true, TorMode.Enabled, 37155, 37156);
 
 		services.AddSingleton(torSetting);
-
 		services.AddSingleton<IdempotencyRequestCache>();
+
+		var config = configProvider.GetCurrent();
 		services.AddSingleton<IRPCClient>(provider =>
 		{
 			string host;
@@ -113,10 +115,10 @@ public class Startup(IConfiguration configuration)
 
 		services.AddSingleton<Prison>(s => s.GetRequiredService<Warden>().Prison);
 		services.AddBackgroundService<Warden>(s => new Warden(Path.Combine(dataDir, "Prison.txt")));
+
 		services.AddSingleton<RoundParametersFactory>(s =>
 		{
-			var config = s.GetRequiredService<WabiSabiConfig>();
-			return (feeRate, minInputCountByRound) => RoundParameters.Create(config, feeRate, minInputCountByRound);
+			return (config, feeRate, minInputCountByRound) => RoundParameters.Create(config, feeRate);
 		});
 		services.AddBackgroundService<Arena>();
 
