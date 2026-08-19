@@ -290,7 +290,7 @@ public partial class Arena : PeriodicRunner
 					try
 					{
 						int confirmationTarget = (int)round.Config.ConfirmationTarget;
-						var targetFeeRate = await GetFeeRateEstimationAsync(confirmationTarget, cancellationToken).ConfigureAwait(false);
+						var targetFeeRate = await GetFeeRateEstimationAsync(round.Config, cancellationToken).ConfigureAwait(false);
 						Logger.LogInfo($"Current Fee Rate on the Network: {targetFeeRate.SatoshiPerByte} sat/vByte. Confirmation target is: {confirmationTarget} blocks.", round);
 					}
 					catch (Exception ex)
@@ -456,7 +456,7 @@ public partial class Arena : PeriodicRunner
 		// This indicates to the client that there will be a blame round.
 		EndRound(round, EndRoundState.NotAllAlicesSign);
 
-		FeeRate feeRate = await GetFeeRateEstimationAsync((int)round.Config.ConfirmationTarget, cancellationToken).ConfigureAwait(false);
+		FeeRate feeRate = await GetFeeRateEstimationAsync(round.Config, cancellationToken).ConfigureAwait(false);
 		var blameWhitelist = round.Alices
 			.Select(x => x.Coin.Outpoint)
 			.Where(x => !_prison.IsBanned(x, round.Config.GetDoSConfiguration(), DateTimeOffset.UtcNow))
@@ -477,7 +477,7 @@ public partial class Arena : PeriodicRunner
 		int roundsToCreate = Math.Max(0, currentConfig.RoundParallelization - registrableRoundCount);
 		for (int i = 0; i < roundsToCreate; i++)
 		{
-			FeeRate feeRate = await GetFeeRateEstimationAsync((int)currentConfig.ConfirmationTarget, cancellationToken).ConfigureAwait(false);
+			FeeRate feeRate = await GetFeeRateEstimationAsync(currentConfig, cancellationToken).ConfigureAwait(false);
 			RoundParameters parameters = _roundParametersFactory(currentConfig, feeRate, _maxSuggestedAmountProvider.MaxSuggestedAmount);
 
 			var r = new Round(currentConfig, parameters, SecureRandom.Instance);
@@ -589,10 +589,12 @@ public partial class Arena : PeriodicRunner
 		return signingState;
 	}
 
-	private async Task<FeeRate> GetFeeRateEstimationAsync(int confirmationTarget, CancellationToken cancellationToken)
+	private async Task<FeeRate> GetFeeRateEstimationAsync(WabiSabiConfig config, CancellationToken cancellationToken)
 	{
 		var feeEstimations = await _feeRateProvider(cancellationToken).ConfigureAwait(false);
-		return feeEstimations.GetFeeRate(confirmationTarget);
+		var feeRate = feeEstimations.GetFeeRate((int)config.ConfirmationTarget);
+
+		return FeeRate.Max(config.MinimumAcceptableFeeRate, feeRate);
 	}
 
 	/// <summary>
