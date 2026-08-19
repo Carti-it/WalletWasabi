@@ -29,13 +29,14 @@ public class CoinJoinClientTests
 	[Fact]
 	public async Task ClientRefusesToSignWhenActualInputCountBelowConfiguredMinimum()
 	{
-		var roundParameters = WabiSabiFactory.CreateRoundParameters(new WabiSabiConfig()) with
+		var cfg = new WabiSabiConfig();
+		var roundParameters = WabiSabiFactory.CreateRoundParameters(cfg) with
 		{
 			MiningFeeRate = new FeeRate(1m),
 			MinInputCountByRound = 21,
 			TransactionSigningTimeout = TimeSpan.FromSeconds(11)
 		};
-		var round = WabiSabiFactory.CreateRound(roundParameters);
+		var round = WabiSabiFactory.CreateRound(cfg, roundParameters);
 
 		// Create victim's coin and coordinator's coin
 		var (keyChain, victimCoin, _) = WabiSabiFactory.CreateCoinKeyPairs();

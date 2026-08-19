@@ -159,11 +159,12 @@ public class CoinjoinCostsTests
 
 		public CoinjoinBuilder()
 		{
-			var parameters = WabiSabiFactory.CreateRoundParameters(new WabiSabiConfig()) with
+			var cfg = new WabiSabiConfig();
+			var parameters = WabiSabiFactory.CreateRoundParameters(cfg) with
 			{
 				MiningFeeRate = new FeeRate(SatoshiPerByte)
 			};
-			var round = WabiSabiFactory.CreateRound(parameters);
+			var round = WabiSabiFactory.CreateRound(cfg, parameters);
 
 			_keyManager = ServiceFactory.CreateKeyManager("");
 			_keyChain = new KeyChain(_keyManager, "");
