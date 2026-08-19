@@ -14,6 +14,14 @@ namespace WalletWasabi.Tests.UnitTests.WabiSabi.Backend;
 public class PrisonTests
 {
 	[Fact]
+	public async Task OfacTestAsync()
+	{
+		// var provider = new OfacSdnProvider();
+		// var list = await provider.GetSanctionedBtcAddressesAsync(CancellationToken.None);
+		// Assert.NotEmpty(list);
+	}
+
+	[Fact]
 	public async Task OffensesAreSavedAsync()
 	{
 		using CancellationTokenSource ctsTimeout = new(TimeSpan.FromMinutes(1));
@@ -172,7 +180,7 @@ public class PrisonTests
 				return prison.GetBanTimePeriod(x.Created, cfg);
 			}).ToArray();
 
-		// Every time it is banned, the duration is halfed
+		// Every time it is banned, the duration is halved
 		var banningTimeFramePairs = banningTimeFrames.Zip(banningTimeFrames[1..], (parent, child) => (Parent: parent, Child: child)).ToArray();
 		Assert.All(banningTimeFramePairs[..^1], x => Assert.Equal(x.Parent.Duration, x.Child.Duration * 2));
 
