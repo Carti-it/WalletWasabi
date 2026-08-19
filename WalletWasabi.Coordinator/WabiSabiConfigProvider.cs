@@ -8,7 +8,8 @@ public class WabiSabiConfigProvider
 	public WabiSabiConfigProvider(string path)
 	{
 		_path = path;
-		_config = WabiSabiConfig.LoadFile(_path);
+		_config = WabiSabiConfig.TryLoadFile(path) ??
+			throw new InvalidOperationException($"Fix config '{path}' file.");
 	}
 
 	/// <remarks>Constructor for tests which does not lead to config reloading.</remarks>
@@ -37,14 +38,24 @@ public class WabiSabiConfigProvider
 		else
 		{
 			// TODO: Consider using a time reference to avoid reading the file too often.
-			var newConfig = WabiSabiConfig.LoadFile(_config.FilePath);
-
-			lock (_lock)
+			var newConfig = WabiSabiConfig.TryLoadFile(_config.FilePath);
+			if (newConfig is null)
 			{
-				_config = newConfig;
+				// Return existing config instead.
+				lock (_lock)
+				{
+					return _config;
+				}
 			}
+			else
+			{
+				lock (_lock)
+				{
+					_config = newConfig;
+				}
 
-			return newConfig;
+				return newConfig;
+			}
 		}
 	}
 }
