@@ -1,9 +1,6 @@
 using WabiSabi.Crypto;
 using WabiSabi.Crypto.Randomness;
-using WalletWasabi.Crypto;
-using WalletWasabi.WabiSabi.Coordinator.Models;
 using WalletWasabi.WabiSabi.Crypto;
-using WalletWasabi.WabiSabi.Models.MultipartyTransaction;
 using static WalletWasabi.Logging.LoggerTools;
 using CredentialIssuer = WabiSabi.Native.CredentialIssuer;
 
@@ -31,8 +28,9 @@ public enum EndRoundState
 public class Round
 {
 	private Lazy<uint256> _id;
-	public Round(RoundParameters parameters, WasabiRandom random)
+	public Round(WabiSabiConfig config, RoundParameters parameters, WasabiRandom random)
 	{
+		Config = config;
 		Parameters = parameters;
 
 		CoinjoinState = new ConstructionState(Parameters);
@@ -49,6 +47,8 @@ public class Round
 
 		_id = new Lazy<uint256>(CalculateHash);
 	}
+
+	public WabiSabiConfig Config { get; }
 
 	public uint256 Id => _id.Value;
 	public MultipartyTransactionState CoinjoinState { get; set; }

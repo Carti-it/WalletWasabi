@@ -2,7 +2,7 @@ using NBitcoin.Policy;
 
 namespace WalletWasabi.WabiSabi.Coordinator.Rounds;
 
-public delegate RoundParameters RoundParametersFactory(FeeRate feeRate, int? minInputCountByRound = null);
+public delegate RoundParameters RoundParametersFactory(WabiSabiConfig config, FeeRate feeRate, int? minInputCountByRound = null);
 
 public record RoundParameters
 {

@@ -29,7 +29,7 @@ namespace WalletWasabi.Coordinator.WabiSabi;
 public partial class Arena : PeriodicRunner
 {
 	public Arena(
-		WabiSabiConfig config,
+		WabiSabiConfigProvider configProvider,
 		IRPCClient rpc,
 		Prison prison,
 		RoundParametersFactory roundParametersFactory,
@@ -38,7 +38,8 @@ public partial class Arena : PeriodicRunner
 		TimeSpan? period = null
 		) : base(period ?? TimeSpan.FromSeconds(2))
 	{
-		_config = config;
+		_configProvider = configProvider;
+		_staticConfig = _configProvider.GetCurrent();
 		_rpc = rpc;
 		_prison = prison;
 		_coinJoinScriptStore = coinJoinScriptStore;
@@ -50,7 +51,8 @@ public partial class Arena : PeriodicRunner
 	private ImmutableList<RoundState> _roundStates = [];
 	private readonly ConcurrentQueue<uint256> _disruptedRounds = new();
 	private readonly AsyncLock _asyncLock = new();
-	private readonly WabiSabiConfig _config;
+	private readonly WabiSabiConfigProvider _configProvider;
+	private readonly WabiSabiConfig _staticConfig;
 	private readonly IRPCClient _rpc;
 	private readonly Prison _prison;
 	private readonly CoinJoinScriptStore? _coinJoinScriptStore;
@@ -208,7 +210,7 @@ public partial class Arena : PeriodicRunner
 					}
 					else
 					{
-						round.OutputRegistrationTimeFrame = TimeFrame.Create(_config.FailFastOutputRegistrationTimeout);
+						round.OutputRegistrationTimeFrame = TimeFrame.Create(round.Config.FailFastOutputRegistrationTimeout);
 						SetRoundPhase(round, Phase.OutputRegistration);
 					}
 				}
@@ -238,7 +240,7 @@ public partial class Arena : PeriodicRunner
 					Logger.LogInfo(FormatLog($"{coinjoin.Outputs.Count()} outputs were added.", round));
 
 					round.CoordinatorScript = GetCoordinatorScriptPreventReuse(round);
-					coinjoin = AddCoordinationFee(round, coinjoin, round.CoordinatorScript, _config.TrimCoordinatorOutput);
+					coinjoin = AddCoordinationFee(round, coinjoin, round.CoordinatorScript, round.Config.TrimCoordinatorOutput);
 
 					round.CoinjoinState = FinalizeTransaction(coinjoin);
 
@@ -246,7 +248,7 @@ public partial class Arena : PeriodicRunner
 					{
 						// It would be better to end the round and create a blame round here, but older client would not support it.
 						// See https://github.com/WalletWasabi/WalletWasabi/pull/11028.
-						round.TransactionSigningTimeFrame = TimeFrame.Create(_config.FailFastTransactionSigningTimeout);
+						round.TransactionSigningTimeFrame = TimeFrame.Create(round.Config.FailFastTransactionSigningTimeout);
 						round.FastSigningPhase = true;
 					}
 
@@ -285,8 +287,9 @@ public partial class Arena : PeriodicRunner
 					// Added for monitoring reasons.
 					try
 					{
-						var targetFeeRate = await GetFeeRateEstimationAsync(cancellationToken).ConfigureAwait(false);
-						Logger.LogInfo(FormatLog($"Current Fee Rate on the Network: {targetFeeRate.SatoshiPerByte} sat/vByte. Confirmation target is: {(int)_config.ConfirmationTarget} blocks.", round));
+						int confirmationTarget = (int)round.Config.ConfirmationTarget;
+						var targetFeeRate = await GetFeeRateEstimationAsync(confirmationTarget, cancellationToken).ConfigureAwait(false);
+						Logger.LogInfo($"Current Fee Rate on the Network: {targetFeeRate.SatoshiPerByte} sat/vByte. Confirmation target is: {confirmationTarget} blocks.", round);
 					}
 					catch (Exception ex)
 					{
@@ -310,10 +313,10 @@ public partial class Arena : PeriodicRunner
 					EndRound(round, EndRoundState.TransactionBroadcasted);
 					Logger.LogInfo(FormatLog($"Successfully broadcast the coinjoin: {coinjoin.GetHash()}.", round));
 
-					var coordinatorScriptPubKey = _config.GetNextCleanCoordinatorScript();
+					var coordinatorScriptPubKey = _staticConfig.GetNextCleanCoordinatorScript();
 					if (round.CoordinatorScript == coordinatorScriptPubKey)
 					{
-						_config.MakeNextCoordinatorScriptDirty();
+						_staticConfig.MakeNextCoordinatorScriptDirty();
 					}
 
 					foreach (var address in coinjoin.Outputs
@@ -439,7 +442,7 @@ public partial class Arena : PeriodicRunner
 
 	private async Task EndRoundAndTryCreateBlameRoundAsync(Round round, CancellationToken cancellationToken)
 	{
-		if (round.InputCount < _config.MinInputCountByBlameRound)
+		if (round.InputCount < round.Config.MinInputCountByBlameRound)
 		{
 			// There are not enough inputs, makes no sense to create the blame round.
 			EndRound(round, EndRoundState.AbortedNotEnoughAlicesSigned);
@@ -449,13 +452,13 @@ public partial class Arena : PeriodicRunner
 		// This indicates to the client that there will be a blame round.
 		EndRound(round, EndRoundState.NotAllAlicesSign);
 
-		FeeRate feeRate = await GetFeeRateEstimationAsync(cancellationToken).ConfigureAwait(false);
+		FeeRate feeRate = await GetFeeRateEstimationAsync((int)round.Config.ConfirmationTarget, cancellationToken).ConfigureAwait(false);
 		var blameWhitelist = round.Alices
 			.Select(x => x.Coin.Outpoint)
-			.Where(x => !_prison.IsBanned(x, _config.GetDoSConfiguration(), DateTimeOffset.UtcNow))
+			.Where(x => !_prison.IsBanned(x, round.Config.GetDoSConfiguration(), DateTimeOffset.UtcNow))
 			.ToHashSet();
 
-		RoundParameters parameters = _roundParametersFactory(feeRate, _config.MinInputCountByBlameRound);
+		RoundParameters parameters = _roundParametersFactory(round.Config, feeRate, round.Config.MinInputCountByBlameRound);
 		BlameRound blameRound = new(parameters, round, blameWhitelist, SecureRandom.Instance);
 		Rounds.Add(blameRound);
 		Logger.LogInfo(FormatLog($"Created from round {round.Id}.", blameRound));
@@ -463,15 +466,17 @@ public partial class Arena : PeriodicRunner
 
 	private async Task CreateRoundsAsync(CancellationToken cancellationToken)
 	{
+		var currentConfig = _configProvider.GetCurrent();
+
 		// Add more rounds if not enough.
 		var registrableRoundCount = Rounds.Count(x => x is not BlameRound && x.Phase == Phase.InputRegistration && x.InputRegistrationTimeFrame.Remaining > TimeSpan.FromMinutes(1));
-		int roundsToCreate = _config.RoundParallelization - registrableRoundCount;
+		int roundsToCreate = Math.Max(0, currentConfig.RoundParallelization - registrableRoundCount);
 		for (int i = 0; i < roundsToCreate; i++)
 		{
-			FeeRate feeRate = await GetFeeRateEstimationAsync(cancellationToken).ConfigureAwait(false);
-			RoundParameters parameters = _roundParametersFactory(feeRate);
+			FeeRate feeRate = await GetFeeRateEstimationAsync((int)currentConfig.ConfirmationTarget, cancellationToken).ConfigureAwait(false);
+			RoundParameters parameters = _roundParametersFactory(currentConfig, feeRate);
 
-			var r = new Round(parameters, SecureRandom.Instance);
+			var r = new Round(currentConfig, parameters, SecureRandom.Instance);
 			Rounds.Add(r);
 			Logger.LogInfo(FormatLog("Created new round.", r));
 		}
@@ -482,7 +487,7 @@ public partial class Arena : PeriodicRunner
 		foreach (var expiredRound in Rounds.Where(
 			x =>
 			x.Phase == Phase.Ended
-			&& x.End + _config.RoundExpiryTimeout < DateTimeOffset.UtcNow).ToArray())
+			&& x.End + x.Config.RoundExpiryTimeout < DateTimeOffset.UtcNow).ToArray())
 		{
 			Rounds.Remove(expiredRound);
 		}
@@ -556,14 +561,14 @@ public partial class Arena : PeriodicRunner
 
 	private Script GetCoordinatorScriptPreventReuse(Round round)
 	{
-		var coordinatorScriptPubKey = _config.GetNextCleanCoordinatorScript();
+		var coordinatorScriptPubKey = _staticConfig.GetNextCleanCoordinatorScript();
 
 		// Prevent coordinator script reuse.
 		if (Rounds.Any(r => r.CoordinatorScript == coordinatorScriptPubKey))
 		{
-			_config.MakeNextCoordinatorScriptDirty();
-			coordinatorScriptPubKey = _config.GetNextCleanCoordinatorScript();
-			Logger.LogWarning(FormatLog("Coordinator script pub key was already used by another round, making it dirty and taking a new one.", round));
+			_staticConfig.MakeNextCoordinatorScriptDirty();
+			coordinatorScriptPubKey = _staticConfig.GetNextCleanCoordinatorScript();
+			Logger.LogWarning("Coordinator script pub key was already used by another round, making it dirty and taking a new one.", round);
 		}
 
 		return coordinatorScriptPubKey;
@@ -600,10 +605,10 @@ public partial class Arena : PeriodicRunner
 		return signingState;
 	}
 
-	private async Task<FeeRate> GetFeeRateEstimationAsync(CancellationToken cancellationToken)
+	private async Task<FeeRate> GetFeeRateEstimationAsync(int confirmationTarget, CancellationToken cancellationToken)
 	{
 		var feeEstimations = await _feeRateProvider(cancellationToken).ConfigureAwait(false);
-		return feeEstimations.GetFeeRate((int)_config.ConfirmationTarget);
+		return feeEstimations.GetFeeRate(confirmationTarget);
 	}
 
 	/// <summary>

@@ -22,6 +22,7 @@ using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
 using WalletWasabi.Models;
 using WalletWasabi.Serialization;
+using WalletWasabi.Services;
 using WalletWasabi.Tor;
 using WalletWasabi.WabiSabi.Coordinator;
 using WalletWasabi.WabiSabi.Coordinator.DoSPrevention;
@@ -62,19 +63,16 @@ public class Startup(IConfiguration configuration)
 
 		services.AddControllers();
 
-		var configFilePath = Path.Combine(dataDir, "Config.json");
-		var config = WabiSabiConfig.TryLoadFile(configFilePath) ??
-			throw new InvalidDataException($"Failed to load '{configFilePath}' config.");
+		var configProvider = new WabiSabiConfigProvider(Path.Combine(dataDir, "Config.json"));
+		services.AddSingleton(configProvider);
 
-		services.AddSingleton(config);
-
-		var torSetting = new TorSettings(dataDir,
-			wasabiInstallationFolderPath: EnvironmentHelpers.GetFullBaseDirectory(),
+		var torSetting = new TorSettings(dataDir, wasabiInstallationFolderPath: EnvironmentHelpers.GetFullBaseDirectory(),
 			true, TorMode.Enabled, 37155, 37156);
 
 		services.AddSingleton(torSetting);
-
 		services.AddSingleton<IdempotencyRequestCache>();
+
+		var config = configProvider.GetCurrent();
 		services.AddSingleton<IRPCClient>(provider =>
 		{
 			string host;
@@ -113,10 +111,10 @@ public class Startup(IConfiguration configuration)
 
 		services.AddSingleton<Prison>(s => s.GetRequiredService<Warden>().Prison);
 		services.AddBackgroundService<Warden>(s => new Warden(Path.Combine(dataDir, "Prison.txt")));
+
 		services.AddSingleton<RoundParametersFactory>(s =>
 		{
-			var config = s.GetRequiredService<WabiSabiConfig>();
-			return (feeRate, minInputCountByRound) => RoundParameters.Create(config, feeRate, minInputCountByRound);
+			return (config, feeRate, minInputCountByRound) => RoundParameters.Create(config, feeRate);
 		});
 		services.AddBackgroundService<Arena>();
 

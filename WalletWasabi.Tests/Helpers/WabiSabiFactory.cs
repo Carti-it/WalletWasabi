@@ -83,11 +83,11 @@ public static class WabiSabiFactory
 			}),
 			[ScriptType.P2WPKH, ScriptType.Taproot]);
 
-	public static Round CreateRound(RoundParameters parameters) =>
-		new(parameters, InsecureRandom.Instance);
+	public static Round CreateRound(WabiSabiConfig config, RoundParameters parameters) =>
+		new(config, parameters, InsecureRandom.Instance);
 
 	public static Round CreateRound(WabiSabiConfig cfg) =>
-		CreateRound(CreateRoundParameters(cfg) with
+		CreateRound(cfg, CreateRoundParameters(cfg) with
 		{
 			MaxVsizeAllocationPerAlice =
 				Constants.P2wpkhInputVirtualSize + Constants.P2wpkhOutputVirtualSize // enough vsize for one input and one output
@@ -352,7 +352,7 @@ public static class WabiSabiFactory
 	}
 
 	public static RoundParametersFactory CreateRoundParametersFactory(WabiSabiConfig cfg, int maxVsizeAllocationPerAlice) =>
-		(rate, minInputCountByRound) => CreateRoundParameters(cfg) with
+		(config, rate, minInputCountByRound) => CreateRoundParameters(cfg) with
 		{
 			MinInputCountByRound = minInputCountByRound ?? cfg.MinInputCountByRound,
 			MaxVsizeAllocationPerAlice = maxVsizeAllocationPerAlice

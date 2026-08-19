@@ -19,7 +19,7 @@ public class ConstructionStateTests
 		var cfg = new WabiSabiConfig();
 		var roundParameters = RoundParameters.Create(cfg, miningFeeRate);
 
-		var round = WabiSabiFactory.CreateRound(roundParameters);
+		var round = WabiSabiFactory.CreateRound(cfg, roundParameters);
 		var state = round.Assert<ConstructionState>();
 
 		var (coin, ownershipProof) = WabiSabiFactory.CreateCoinWithOwnershipProof(
@@ -42,8 +42,9 @@ public class ConstructionStateTests
 	public void FinalizeAcceptsFeesChargedByCredentials(long changeAmount, bool isAccepted)
 	{
 		var miningFeeRate = new FeeRate(1.07m);
-		var roundParameters = RoundParameters.Create(new WabiSabiConfig(), miningFeeRate);
-		var round = WabiSabiFactory.CreateRound(roundParameters);
+		var cfg = new WabiSabiConfig();
+		var roundParameters = RoundParameters.Create(cfg, miningFeeRate);
+		var round = WabiSabiFactory.CreateRound(cfg, roundParameters);
 		var state = round.Assert<ConstructionState>();
 		using Key key = new();
 

@@ -25,6 +25,7 @@ using WalletWasabi.WabiSabi.Coordinator.Statistics;
 using WalletWasabi.Tests.UnitTests.Mocks;
 using WalletWasabi.Coordinator.WabiSabi;
 using WalletWasabi.Extensions;
+using WalletWasabi.Coordinator;
 
 namespace WalletWasabi.Tests.UnitTests.WabiSabi.Integration;
 
@@ -59,11 +60,10 @@ public class WabiSabiApiApplicationFactory<TStartup> : WebApplicationFactory<TSt
 			services.AddSingleton(_ => Network.RegTest);
 			services.AddSingleton<IRPCClient>(_ => BitcoinFactory.GetMockMinimalRpc());
 			services.AddSingleton<Prison>(_ => WabiSabiFactory.CreatePrison());
-			services.AddSingleton<WabiSabiConfig>();
-			services.AddSingleton<RoundParametersFactory>(s =>
+			services.AddSingleton<WabiSabiConfigProvider>(sp => new WabiSabiConfigProvider(WabiSabiFactory.CreateWabiSabiConfig()));
+			services.AddSingleton<RoundParametersFactory>(_ =>
 			{
-				var config = s.GetRequiredService<WabiSabiConfig>();
-				return (feeRate, minInputCountByRound) => RoundParameters.Create(config, feeRate, minInputCountByRound);
+				return (config, feeRate, minInputCountByRound) => RoundParameters.Create(config, feeRate);
 			});
 			services.AddSingleton(typeof(TimeSpan), _ => TimeSpan.FromSeconds(2));
 			services.AddSingleton(s => new CoinJoinScriptStore());
