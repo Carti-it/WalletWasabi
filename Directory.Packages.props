@@ -50,6 +50,8 @@
     <!-- Testing. -->
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="$(NetPackagesVersion)" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageVersion Include="BenchmarkDotNet.Annotations" Version="0.15.8" />
     <PackageVersion Include="xunit.v3" Version="3.2.2" />
     <!-- Scheme. -->
     <PackageVersion Include="NScheme" Version="0.0.1" />

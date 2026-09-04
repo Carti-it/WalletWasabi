@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<DisableImplicitNamespaceImports>true</DisableImplicitNamespaceImports>
+		<IsPackable>false</IsPackable>
+		<OutputType>Exe</OutputType>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BenchmarkDotNet" />
+		<PackageReference Include="BenchmarkDotNet.Annotations" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\WalletWasabi\WalletWasabi.csproj" />
+	</ItemGroup>
+
+</Project>

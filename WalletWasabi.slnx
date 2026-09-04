@@ -19,6 +19,7 @@
     <File Path="NuGet.Config" />
     <File Path="README.md" />
   </Folder>
+  <Project Path="WalletWasabi.Benchmarks/WalletWasabi.Benchmarks.csproj" />
   <Project Path="WalletWasabi.Client/WalletWasabi.Client.csproj" />
   <Project Path="WalletWasabi.Coordinator/WalletWasabi.Coordinator.csproj" />
   <Project Path="WalletWasabi.Daemon/WalletWasabi.Daemon.csproj" />
