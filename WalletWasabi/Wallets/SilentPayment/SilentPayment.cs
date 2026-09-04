@@ -131,7 +131,7 @@ public static class SilentPayment
 			var pubKeyParameters = PayToTaprootTemplate.Instance.ExtractScriptPubKeyParameters(spk);
 			var annex = txInWitness[txInWitness.PushCount -1][^1] == 0x50 ? 1 : 0;
 			if (txInWitness.PushCount > annex &&
-			    ByteHelpers.CompareFastUnsafe(txInWitness[txInWitness.PushCount - annex - 1][1..33], NUMS))
+			    ByteHelpers.CompareFast(txInWitness[txInWitness.PushCount - annex - 1][1..33], NUMS))
 			{
 				return null;
 			}

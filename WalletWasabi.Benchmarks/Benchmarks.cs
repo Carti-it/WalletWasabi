@@ -23,7 +23,7 @@ public class Benchmarks
 	[Benchmark]
 	public bool Master()
 	{
-		return ByteHelpers.CompareFastUnsafe(NUMS, TEST);
+		return ByteHelpers.CompareFast(NUMS, TEST);
 	}
 
 	[Benchmark]
