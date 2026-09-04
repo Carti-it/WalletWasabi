@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace WalletWasabi.Helpers;
 
-public static unsafe class ByteHelpers
+public static class ByteHelpers
 {
 	// https://stackoverflow.com/questions/415291/best-way-to-combine-two-or-more-byte-arrays-in-c-sharp
 	/// <summary>
