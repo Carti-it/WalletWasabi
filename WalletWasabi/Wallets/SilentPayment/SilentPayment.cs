@@ -56,7 +56,7 @@ public static class SilentPayment
 
 	public static Dictionary<SilentPaymentAddress, Script[]> ExtractSilentPaymentScriptPubKeys(SilentPaymentAddress[] addresses, ECPubKey tweakData, Transaction tx, ECPrivKey scanKey)
 	{
-		if (!IsElegible(tx))
+		if (!IsEligible(tx))
 		{
 			return [];
 		}
@@ -72,7 +72,7 @@ public static class SilentPayment
 		return silentPaymentOutputs.ToDictionary(x => x.Key, x => x.Select(y => new TaprootPubKey(y.PubKey.ToBytes()).ScriptPubKey).ToArray());
 	}
 
-	private static bool IsElegible(Transaction tx) =>
+	private static bool IsEligible(Transaction tx) =>
 		tx.Outputs.Any(x => x.ScriptPubKey.IsScriptType(ScriptType.Taproot));
 
 	public static ECPrivKey CreateLabel(ECPrivKey scanKey, uint label)
