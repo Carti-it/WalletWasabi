@@ -4,7 +4,6 @@ using NBitcoin.Secp256k1;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using WalletWasabi.Extensions;
 using WalletWasabi.Wallets.SilentPayment;
 using Xunit;
