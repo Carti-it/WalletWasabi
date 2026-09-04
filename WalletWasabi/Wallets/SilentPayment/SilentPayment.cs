@@ -11,6 +11,10 @@ public static class SilentPayment
 	private static readonly byte[] NUMS =
 		Encoders.Hex.DecodeData("50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0");
 
+	private static readonly byte[] BIP0352_SharedSecret_SHA256 = Hashes.SHA256(Encoding.UTF8.GetBytes("BIP0352/SharedSecret"));
+	private static readonly byte[] BIP0352_Inputs_SHA256 = Hashes.SHA256(Encoding.UTF8.GetBytes("BIP0352/Inputs"));
+	private static readonly byte[] BIP0352_Label_SHA256 = Hashes.SHA256(Encoding.UTF8.GetBytes("BIP0352/Label"));
+
 	private const uint K_MAX = 2323;
 
 	public static ECPubKey ComputeSharedSecretReceiver(OutPoint[] prevOuts, GE[] pubKeys, ECPrivKey b) =>
@@ -72,9 +76,7 @@ public static class SilentPayment
 
 	public static ECPrivKey CreateLabel(ECPrivKey scanKey, uint label) =>
 		ECPrivKey.Create(
-			TaggedHash(
-				"BIP0352/Label",
-				ByteHelpers.Combine(scanKey.sec.ToBytes(), Serialize32(label))));
+			TaggedHash(BIP0352_Label_SHA256, ByteHelpers.Combine(scanKey.sec.ToBytes(), Serialize32(label))));
 
 	// Let ecdh_shared_secret = input_hash·a·Bscan
 	private static ECPubKey ComputeSharedSecret(OutPoint[] outpoints, ECPrivKey a, ECPubKey B) =>
@@ -96,9 +98,7 @@ public static class SilentPayment
 	// let tk = hash_BIP0352/SharedSecret(serP(ecdh_shared_secret) || ser32(k))
 	public static ECPrivKey TweakKey(ECPubKey sharedSecret, uint k) =>
 		ECPrivKey.Create(
-			TaggedHash(
-				"BIP0352/SharedSecret",
-				ByteHelpers.Combine(sharedSecret.ToBytes(), Serialize32(k))));
+			TaggedHash(BIP0352_SharedSecret_SHA256, ByteHelpers.Combine(sharedSecret.ToBytes(), Serialize32(k))));
 
 	public static ECPubKey ComputeSharedSecretSender(Utxo[] utxos, ECPubKey B)
 	{
@@ -110,7 +110,7 @@ public static class SilentPayment
 	private static Scalar InputHash(OutPoint[] outpoints, ECPubKey A)
 	{
 		var outpointL = outpoints.Select(x => x.ToBytes()).Order(BytesComparer.Instance).First();
-		var hash = TaggedHash("BIP0352/Inputs", ByteHelpers.Combine(outpointL, A.ToBytes()));
+		var hash = TaggedHash(BIP0352_Inputs_SHA256, ByteHelpers.Combine(outpointL, A.ToBytes()));
 		return new Scalar(hash);
 	}
 
@@ -210,9 +210,8 @@ public static class SilentPayment
 	private static ECPubKey SumPublicKeys(IEnumerable<GE> pubKeys) =>
 		new(pubKeys.Aggregate(GEJ.Infinity, (acc, key) => acc + key).ToGroupElement(), null);
 
-	private static byte[] TaggedHash(string tag, byte[] data)
+	private static byte[] TaggedHash(byte[] tagHash, byte[] data)
 	{
-		var tagHash = Hashes.SHA256(Encoding.UTF8.GetBytes(tag));
 		var concat = ByteHelpers.Combine(tagHash, tagHash, data);
 		return Hashes.SHA256(concat);
 	}
