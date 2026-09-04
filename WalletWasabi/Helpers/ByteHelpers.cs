@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-
 namespace WalletWasabi.Helpers;
 
 public static class ByteHelpers
@@ -10,11 +7,6 @@ public static class ByteHelpers
 	/// Fastest byte array concatenation in C#
 	/// </summary>
 	public static byte[] Combine(params byte[][] arrays)
-	{
-		return Combine(arrays.AsEnumerable());
-	}
-
-	public static byte[] Combine(IEnumerable<byte[]> arrays)
 	{
 		byte[] ret = new byte[arrays.Sum(x => x.Length)];
 		int offset = 0;
