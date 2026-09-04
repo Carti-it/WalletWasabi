@@ -5,6 +5,7 @@ using NBitcoin.Secp256k1;
 
 namespace WalletWasabi.Wallets.SilentPayment;
 
+#pragma warning disable IDE1006 // Naming Styles
 public static class SilentPayment
 {
 	private static readonly byte[] NUMS =
@@ -227,5 +228,6 @@ public static class SilentPayment
 		return result;
 	}
 }
+#pragma warning restore IDE1006 // Naming Styles
 
 public record Utxo(OutPoint OutPoint, Key SigningKey, Script ScriptPubKey);
