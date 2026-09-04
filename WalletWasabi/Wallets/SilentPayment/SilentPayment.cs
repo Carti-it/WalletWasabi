@@ -1,7 +1,8 @@
-using System.Text;
 using NBitcoin.Crypto;
 using NBitcoin.DataEncoders;
 using NBitcoin.Secp256k1;
+using System.Buffers.Binary;
+using System.Text;
 
 namespace WalletWasabi.Wallets.SilentPayment;
 
@@ -74,9 +75,13 @@ public static class SilentPayment
 	private static bool IsElegible(Transaction tx) =>
 		tx.Outputs.Any(x => x.ScriptPubKey.IsScriptType(ScriptType.Taproot));
 
-	public static ECPrivKey CreateLabel(ECPrivKey scanKey, uint label) =>
-		ECPrivKey.Create(
-			TaggedHash(BIP0352_Label_SHA256, scanKey.sec.ToBytes(), Serialize32(label)));
+	public static ECPrivKey CreateLabel(ECPrivKey scanKey, uint label)
+	{
+		Span<byte> kBytes = stackalloc byte[4];
+		BinaryPrimitives.WriteUInt32BigEndian(kBytes, label);
+
+		return ECPrivKey.Create(TaggedHash(BIP0352_Label_SHA256, scanKey.sec.ToBytes(), kBytes));
+	}
 
 	// Let ecdh_shared_secret = input_hash·a·Bscan
 	private static ECPubKey ComputeSharedSecret(OutPoint[] outpoints, ECPrivKey a, ECPubKey B) =>
@@ -96,9 +101,13 @@ public static class SilentPayment
 		new ECPubKey((inputHash * pubKey.Q).ToGroupElement(), null);
 
 	// let tk = hash_BIP0352/SharedSecret(serP(ecdh_shared_secret) || ser32(k))
-	public static ECPrivKey TweakKey(ECPubKey sharedSecret, uint k) =>
-		ECPrivKey.Create(
-			TaggedHash(BIP0352_SharedSecret_SHA256, sharedSecret.ToBytes(), Serialize32(k)));
+	public static ECPrivKey TweakKey(ECPubKey sharedSecret, uint k)
+	{
+		Span<byte> kBytes = stackalloc byte[4];
+		BinaryPrimitives.WriteUInt32BigEndian(kBytes, k);
+
+		return ECPrivKey.Create(TaggedHash(BIP0352_SharedSecret_SHA256, sharedSecret.ToBytes(), kBytes));
+	}
 
 	public static ECPubKey ComputeSharedSecretSender(Utxo[] utxos, ECPubKey B)
 	{
@@ -229,17 +238,6 @@ public static class SilentPayment
 		data2.CopyTo(buffer[pos..]);
 
 		return Hashes.SHA256(buffer);
-	}
-
-	private static byte[] Serialize32(uint i)
-	{
-		var result = new byte[4];
-		BitConverter.GetBytes(i).CopyTo(result, 0);
-		if (BitConverter.IsLittleEndian)
-		{
-			Array.Reverse(result);
-		}
-		return result;
 	}
 }
 #pragma warning restore IDE1006 // Naming Styles
