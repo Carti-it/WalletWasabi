@@ -76,7 +76,7 @@ public static class SilentPayment
 
 	public static ECPrivKey CreateLabel(ECPrivKey scanKey, uint label) =>
 		ECPrivKey.Create(
-			TaggedHash(BIP0352_Label_SHA256, ByteHelpers.Combine(scanKey.sec.ToBytes(), Serialize32(label))));
+			TaggedHash(BIP0352_Label_SHA256, scanKey.sec.ToBytes(), Serialize32(label)));
 
 	// Let ecdh_shared_secret = input_hash·a·Bscan
 	private static ECPubKey ComputeSharedSecret(OutPoint[] outpoints, ECPrivKey a, ECPubKey B) =>
@@ -98,7 +98,7 @@ public static class SilentPayment
 	// let tk = hash_BIP0352/SharedSecret(serP(ecdh_shared_secret) || ser32(k))
 	public static ECPrivKey TweakKey(ECPubKey sharedSecret, uint k) =>
 		ECPrivKey.Create(
-			TaggedHash(BIP0352_SharedSecret_SHA256, ByteHelpers.Combine(sharedSecret.ToBytes(), Serialize32(k))));
+			TaggedHash(BIP0352_SharedSecret_SHA256, sharedSecret.ToBytes(), Serialize32(k)));
 
 	public static ECPubKey ComputeSharedSecretSender(Utxo[] utxos, ECPubKey B)
 	{
@@ -109,8 +109,10 @@ public static class SilentPayment
 	// Let input_hash = hashBIP0352/Inputs(outpointL || A)
 	private static Scalar InputHash(OutPoint[] outpoints, ECPubKey A)
 	{
-		var outpointL = outpoints.Select(x => x.ToBytes()).Order(BytesComparer.Instance).First();
-		var hash = TaggedHash(BIP0352_Inputs_SHA256, ByteHelpers.Combine(outpointL, A.ToBytes()));
+		var outpointL = outpoints.Select(x => x.ToBytes()).MinBy(x => x, BytesComparer.Instance) ??
+			throw new InvalidOperationException("At least one outpoint is required");
+
+		var hash = TaggedHash(BIP0352_Inputs_SHA256, outpointL, A.ToBytes());
 		return new Scalar(hash);
 	}
 
@@ -210,10 +212,23 @@ public static class SilentPayment
 	private static ECPubKey SumPublicKeys(IEnumerable<GE> pubKeys) =>
 		new(pubKeys.Aggregate(GEJ.Infinity, (acc, key) => acc + key).ToGroupElement(), null);
 
-	private static byte[] TaggedHash(byte[] tagHash, byte[] data)
+	private static byte[] TaggedHash(ReadOnlySpan<byte> tagHash, ReadOnlySpan<byte> data1, ReadOnlySpan<byte> data2)
 	{
-		var concat = ByteHelpers.Combine(tagHash, tagHash, data);
-		return Hashes.SHA256(concat);
+		Span<byte> buffer = stackalloc byte[(tagHash.Length * 2) + data1.Length + data2.Length];
+		var pos = 0;
+
+		tagHash.CopyTo(buffer[pos..]);
+		pos += tagHash.Length;
+
+		tagHash.CopyTo(buffer[pos..]);
+		pos += tagHash.Length;
+
+		data1.CopyTo(buffer[pos..]);
+		pos += data1.Length;
+
+		data2.CopyTo(buffer[pos..]);
+
+		return Hashes.SHA256(buffer);
 	}
 
 	private static byte[] Serialize32(uint i)
