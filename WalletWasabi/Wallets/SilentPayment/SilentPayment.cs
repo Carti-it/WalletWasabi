@@ -161,12 +161,12 @@ public static class SilentPayment
 		}
 		if (txInWitness != WitScript.Empty && spk.IsScriptType(ScriptType.P2WPKH))
 		{
-			var witScriptParameters =
-				PayToWitPubKeyHashTemplate.Instance.ExtractWitScriptParameters(txInWitness);
-			if (witScriptParameters is { } nonNullWitScriptParameters && nonNullWitScriptParameters.PublicKey.IsCompressed)
+			var witScriptParameters = PayToWitPubKeyHashTemplate.Instance.ExtractWitScriptParameters(txInWitness);
+			if (witScriptParameters is not null && witScriptParameters.PublicKey.IsCompressed)
 			{
-				var q = ECPubKey.Create(nonNullWitScriptParameters.PublicKey.ToBytes()).ToXOnlyPubKey().Q;
-				return nonNullWitScriptParameters.PublicKey.ToBytes()[0] == 0x02 ? q : q.Negate();
+				var pubKeyBytes = witScriptParameters.PublicKey.ToBytes();
+				var q = ECPubKey.Create(pubKeyBytes).ToXOnlyPubKey().Q;
+				return pubKeyBytes[0] == 0x02 ? q : q.Negate();
 			}
 		}
 		if (scriptSig != Script.Empty && spk.IsScriptType(ScriptType.P2PKH))
