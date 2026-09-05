@@ -79,7 +79,7 @@ public class SilentPaymentTests
 
 				// Outputs
 				var givenOutputPubKeys = givenOutputs.Select(ParseXOnlyPubKey).ToArray();
-				var detectedOutputPubKeys = SilentPayment.GetPubKeys(addresses.ToArray(), sharedSecret, givenOutputPubKeys);
+				var detectedOutputPubKeys = SilentPayment.GetPubKeys(addresses, sharedSecret, givenOutputPubKeys);
 				var detectedOutputs = detectedOutputPubKeys.Select(x => Encoders.Hex.EncodeData(x.PubKey.ToBytes())).ToArray();
 				var expectedOutputs = expected.outputs.Select(x => x.pub_key).ToArray();
 
