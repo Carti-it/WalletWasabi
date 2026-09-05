@@ -69,6 +69,32 @@ public static class SilentPayment
 		return result.ToArray();
 	}
 
+	public static (SilentPaymentAddress Address, ECXOnlyPubKey PubKey)[] GetPubKeysNew(SilentPaymentAddress[] addresses, ECPubKey sharedSecret, ECXOnlyPubKey[] outputs)
+	{
+		var outputSet = new HashSet<GE>(outputs.Select(o => o.Q));
+		var result = new List<(SilentPaymentAddress, ECXOnlyPubKey)>();
+
+		var sharedSecretBytes = sharedSecret.ToBytes();
+
+		for (uint k = 0; k < outputs.Length; k++)
+		{
+			using var tweakKey = TweakKey(sharedSecretBytes, k);
+			var kG = tweakKey.CreatePubKey().Q.ToGroupElementJacobian();
+
+			foreach (var address in addresses)
+			{
+				var pubKey = ComputePubKey(ref kG, address.SpendKey);
+
+				if (outputSet.Contains(pubKey.Q))
+				{
+					result.Add((address, pubKey));
+				}
+			}
+		}
+
+		return result.ToArray();
+	}
+
 	public static Dictionary<SilentPaymentAddress, Script[]> ExtractSilentPaymentScriptPubKeys(SilentPaymentAddress[] addresses, ECPubKey tweakData, Transaction tx, ECPrivKey scanKey)
 	{
 		if (!IsEligible(tx))
@@ -230,7 +256,14 @@ public static class SilentPayment
 	internal static ECXOnlyPubKey ComputePubKey(ECPubKey Bm, ECPrivKey tweakKey)
 	{
 		// Let Pmk = k·G + Bm
-		var pmk = tweakKey.CreatePubKey().Q.ToGroupElementJacobian() + Bm.Q;
+		var gEJ = tweakKey.CreatePubKey().Q.ToGroupElementJacobian();
+		return ComputePubKey(ref gEJ, Bm);
+	}
+
+	internal static ECXOnlyPubKey ComputePubKey(ref GEJ kG, ECPubKey Bm)
+	{
+		// Let Pmk = k·G + Bm
+		var pmk = kG + Bm.Q;
 		return new ECPubKey(pmk.ToGroupElement(), null).ToXOnlyPubKey();
 	}
 
