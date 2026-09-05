@@ -49,11 +49,13 @@ public static class SilentPayment
 		var outputSet = new HashSet<GE>(outputs.Select(o => o.Q));
 		var result = new List<(SilentPaymentAddress, ECXOnlyPubKey)>(outputs.Length * addresses.Length);
 
+		var sharedSecretBytes = sharedSecret.ToBytes();
+
 		for (uint n = 0; n < outputs.Length; n++)
 		{
 			foreach (var address in addresses)
 			{
-				var pubKey = ComputePubKey(address.SpendKey, sharedSecret, n);
+				var pubKey = ComputePubKey(address.SpendKey, sharedSecretBytes, n);
 
 				if (outputSet.Contains(pubKey.Q))
 				{
@@ -113,11 +115,15 @@ public static class SilentPayment
 
 	// let tk = hash_BIP0352/SharedSecret(serP(ecdh_shared_secret) || ser32(k))
 	public static ECPrivKey TweakKey(ECPubKey sharedSecret, uint k)
+		=> TweakKey(sharedSecret.ToBytes(), k);
+
+	// let tk = hash_BIP0352/SharedSecret(serP(ecdh_shared_secret) || ser32(k))
+	public static ECPrivKey TweakKey(ReadOnlySpan<byte> sharedSecretBytes, uint k)
 	{
 		Span<byte> kBytes = stackalloc byte[4];
 		BinaryPrimitives.WriteUInt32BigEndian(kBytes, k);
 
-		return ECPrivKey.Create(TaggedHash(BIP0352_SharedSecret_SHA256, sharedSecret.ToBytes(), kBytes));
+		return ECPrivKey.Create(TaggedHash(BIP0352_SharedSecret_SHA256, sharedSecretBytes, kBytes));
 	}
 
 	public static ECPubKey ComputeSharedSecretSender(Utxo[] utxos, ECPubKey B)
@@ -206,6 +212,15 @@ public static class SilentPayment
 	internal static ECXOnlyPubKey ComputePubKey(ECPubKey Bm, ECPubKey sharedSecret, uint k)
 	{
 		using var tk = TweakKey(sharedSecret, k);
+
+		// Let Pmk = k·G + Bm
+		var pmk = tk.CreatePubKey().Q.ToGroupElementJacobian() + Bm.Q;
+		return new ECPubKey(pmk.ToGroupElement(), null).ToXOnlyPubKey();
+	}
+
+	internal static ECXOnlyPubKey ComputePubKey(ECPubKey Bm, ReadOnlySpan<byte> sharedSecretBytes, uint k)
+	{
+		using var tk = TweakKey(sharedSecretBytes, k);
 
 		// Let Pmk = k·G + Bm
 		var pmk = tk.CreatePubKey().Q.ToGroupElementJacobian() + Bm.Q;
