@@ -44,15 +44,26 @@ public static class SilentPayment
 			.GroupBy(x => x.Address)
 			.ToDictionary(x => x.Key, x => x.Select(y => y.PubKey).ToArray());
 
-	public static (SilentPaymentAddress Address, ECXOnlyPubKey PubKey)[] GetPubKeys(IEnumerable<SilentPaymentAddress> addresses,
-		ECPubKey sharedSecret, ECXOnlyPubKey[] outputs) =>
-		Enumerable
-			.Range(0, outputs.Length)
-			.Select(n => addresses.Select(address =>
-				(Address: address, PubKey: ComputePubKey(address.SpendKey, sharedSecret, (uint) n))))
-			.SelectMany(x => x)
-			.Where(x => outputs.Select(o => o.Q).Contains(x.PubKey.Q))
-			.ToArray();
+	public static (SilentPaymentAddress Address, ECXOnlyPubKey PubKey)[] GetPubKeys(SilentPaymentAddress[] addresses, ECPubKey sharedSecret, ECXOnlyPubKey[] outputs)
+	{
+		var outputSet = new HashSet<GE>(outputs.Select(o => o.Q));
+		var result = new List<(SilentPaymentAddress, ECXOnlyPubKey)>(outputs.Length * addresses.Length);
+
+		for (uint n = 0; n < outputs.Length; n++)
+		{
+			foreach (var address in addresses)
+			{
+				var pubKey = ComputePubKey(address.SpendKey, sharedSecret, n);
+
+				if (outputSet.Contains(pubKey.Q))
+				{
+					result.Add((address, pubKey));
+				}
+			}
+		}
+
+		return result.ToArray();
+	}
 
 	public static Dictionary<SilentPaymentAddress, Script[]> ExtractSilentPaymentScriptPubKeys(SilentPaymentAddress[] addresses, ECPubKey tweakData, Transaction tx, ECPrivKey scanKey)
 	{
