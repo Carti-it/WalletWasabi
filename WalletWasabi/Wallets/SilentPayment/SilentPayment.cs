@@ -21,6 +21,9 @@ public static class SilentPayment
 	public static ECPubKey ComputeSharedSecretReceiver(OutPoint[] prevOuts, GE[] pubKeys, ECPrivKey b) =>
 		ComputeSharedSecret(prevOuts, A: SumPublicKeys(pubKeys), b);
 
+	public static ECPubKey ComputeSharedSecretReceiverNew(OutPoint[] prevOuts, GE[] pubKeys, ECPrivKey b) =>
+		ComputeSharedSecret(prevOuts, A: SumPublicKeysNew(pubKeys), b);
+
 	public static ECPubKey ComputeSharedSecretReceiver(ECPubKey tweakData, ECPrivKey b) =>
 		new(tweakData.GetSharedPubkey(b).Q, null);
 
@@ -44,34 +47,18 @@ public static class SilentPayment
 			.GroupBy(x => x.Address)
 			.ToDictionary(x => x.Key, x => x.Select(y => y.PubKey).ToArray());
 
-	public static (SilentPaymentAddress Address, ECXOnlyPubKey PubKey)[] GetPubKeys(SilentPaymentAddress[] addresses, ECPubKey sharedSecret, ECXOnlyPubKey[] outputs)
-	{
-		var outputSet = new HashSet<GE>(outputs.Select(o => o.Q));
-		var result = new List<(SilentPaymentAddress, ECXOnlyPubKey)>();
-
-		var sharedSecretBytes = sharedSecret.ToBytes();
-
-		for (uint k = 0; k < outputs.Length; k++)
-		{
-			using var tweakKey = TweakKey(sharedSecretBytes, k);
-
-			foreach (var address in addresses)
-			{
-				var pubKey = ComputePubKey(address.SpendKey, tweakKey);
-
-				if (outputSet.Contains(pubKey.Q))
-				{
-					result.Add((address, pubKey));
-				}
-			}
-		}
-
-		return result.ToArray();
-	}
+	public static (SilentPaymentAddress Address, ECXOnlyPubKey PubKey)[] GetPubKeys(IEnumerable<SilentPaymentAddress> addresses,
+		ECPubKey sharedSecret, ECXOnlyPubKey[] outputs) =>
+		Enumerable
+			.Range(0, outputs.Length)
+			.Select(n => addresses.Select(address =>
+				(Address: address, PubKey: ComputePubKey(address.SpendKey, sharedSecret, (uint)n))))
+			.SelectMany(x => x)
+			.Where(x => outputs.Select(o => o.Q).Contains(x.PubKey.Q))
+			.ToArray();
 
 	public static (SilentPaymentAddress Address, ECXOnlyPubKey PubKey)[] GetPubKeysNew(SilentPaymentAddress[] addresses, ECPubKey sharedSecret, ECXOnlyPubKey[] outputs)
 	{
-		var outputSet = new HashSet<GE>(outputs.Select(o => o.Q));
 		var result = new List<(SilentPaymentAddress, ECXOnlyPubKey)>();
 
 		var sharedSecretBytes = sharedSecret.ToBytes();
@@ -85,9 +72,14 @@ public static class SilentPayment
 			{
 				var pubKey = ComputePubKey(ref kG, address.SpendKey);
 
-				if (outputSet.Contains(pubKey.Q))
+				for (int i = 0; i < outputs.Length; i++)
 				{
-					result.Add((address, pubKey));
+					var output = outputs[i];
+
+					if (output.Q.x == pubKey.Q.x && output.Q.y == pubKey.Q.y)
+					{
+						result.Add((address, pubKey));
+					}
 				}
 			}
 		}
@@ -286,6 +278,18 @@ public static class SilentPayment
 	// Let A = A1 + A2 + ... + An
 	private static ECPubKey SumPublicKeys(IEnumerable<GE> pubKeys) =>
 		new(pubKeys.Aggregate(GEJ.Infinity, (acc, key) => acc + key).ToGroupElement(), null);
+
+	// Let A = A1 + A2 + ... + An
+	private static ECPubKey SumPublicKeysNew(IReadOnlyList<GE> pubKeys)
+	{
+		var acc = GEJ.Infinity;
+		for (int i = 0; i < pubKeys.Count; i++)
+		{
+			acc = acc.Add(pubKeys[i]);
+		}
+
+		return new ECPubKey(acc.ToGroupElement(), null);
+	}
 
 	private static byte[] TaggedHash(ReadOnlySpan<byte> tagHash, ReadOnlySpan<byte> data1, ReadOnlySpan<byte> data2)
 	{

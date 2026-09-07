@@ -91,14 +91,16 @@ public static class SilentPaymentTests
 				var expectedAddresses = expected.addresses.Select(x => SilentPaymentAddress.Parse(x, Network.Main));
 				//Assert.Equal(expectedAddresses, addresses);
 
-				var sharedSecret = SilentPayment.ComputeSharedSecretReceiver(prevOuts, pubKeys, scanKey);
+				var sharedSecret = v
+					? SilentPayment.ComputeSharedSecretReceiverNew(prevOuts, pubKeys, scanKey)
+					: SilentPayment.ComputeSharedSecretReceiver(prevOuts, pubKeys, scanKey);
 
 				// Outputs
-				var givenOutputPubKeys = givenOutputs.Select(ParseXOnlyPubKey).ToArray();
+				//var givenOutputPubKeys = givenOutputs.Select(ParseXOnlyPubKey).ToArray();
 
-				var detectedOutputPubKeys = v
-					? SilentPayment.GetPubKeysNew(addresses, sharedSecret, givenOutputPubKeys)
-					: SilentPayment.GetPubKeys(addresses, sharedSecret, givenOutputPubKeys);
+				//var detectedOutputPubKeys = v
+				//	? SilentPayment.GetPubKeysNew(addresses, sharedSecret, givenOutputPubKeys)
+				//	: SilentPayment.GetPubKeys(addresses, sharedSecret, givenOutputPubKeys);
 			}
 			catch (InvalidOperationException e) when (e.Message.Contains("infinite") && test.comment.Contains("point at infinity"))
 			{
@@ -106,8 +108,8 @@ public static class SilentPaymentTests
 			}
 		}
 
-		ECXOnlyPubKey ParseXOnlyPubKey(string pk) =>
-			ECXOnlyPubKey.Create(Encoders.Hex.DecodeData(pk));
+		//ECXOnlyPubKey ParseXOnlyPubKey(string pk) =>
+		//	ECXOnlyPubKey.Create(Encoders.Hex.DecodeData(pk));
 
 		ECPrivKey ParsePrivKey(string pk) =>
 			ECPrivKey.Create(Encoders.Hex.DecodeData(pk));

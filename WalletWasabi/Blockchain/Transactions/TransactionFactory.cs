@@ -500,7 +500,7 @@ public class TransactionBuilderWithSilentPaymentSupport
 			.DropNulls()
 			.Select(x => new Utxo(x.Outpoint, GetKeyForScriptPubKey(x.ScriptPubKey), x.ScriptPubKey))
 			.ToArray();
-		var paymentAddresses = _silentPayments.Select(x => x.Value);
+		var paymentAddresses = _silentPayments.Select(x => x.Value).ToArray();
 		var scriptPubKeys = SilentPayment
 			.GetPubKeys(paymentAddresses, spentCoins)
 			.Select(x => (SilentPaymentAddress: x.Key, SilentPaymentPubKey: x.Value.First()))
