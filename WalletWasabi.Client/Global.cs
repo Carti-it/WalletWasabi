@@ -28,6 +28,7 @@ using WalletWasabi.Helpers;
 using WalletWasabi.Io;
 using WalletWasabi.Logging;
 using WalletWasabi.Models;
+using WalletWasabi.Observability;
 using WalletWasabi.Rpc;
 using WalletWasabi.Services;
 using WalletWasabi.Services.NodesManagement;
@@ -91,6 +92,11 @@ public class Global
 
 		ExternalSourcesHttpClientFactory = BuildHttpClientFactory();
 
+		_metricManager = new MetricManager();
+		_metricManager.DisposeUsing(_disposables);
+		_metricDisplayService = new MetricDisplayService(_metricManager);
+		_metricDisplayService.DisposeUsing(_disposables);
+
 		var p2PDataDir = GetBitcoinP2PNetworkDirectory();
 		_blockHeaders = ConfigureBlockHeaderChain(p2PDataDir);
 
@@ -128,6 +134,8 @@ public class Global
 	private readonly CancellationTokenSource _stoppingCts = new();
 
 	private readonly P2pConnectionManager _p2pConnectionManager;
+	private readonly MetricManager _metricManager;
+	private readonly MetricDisplayService _metricDisplayService;
 	private TorManager? _torManager;
 	private readonly IRPCClient? _bitcoinRpcClient;
 	private CoinPrison? _coinPrison;
@@ -575,6 +583,7 @@ public class Global
 		using CancellationTokenSource linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _stoppingCts.Token);
 		CancellationToken linkedCtsToken = linkedCts.Token;
 
+		await _metricDisplayService.StartAsync(linkedCtsToken).ConfigureAwait(false);
 		ConfigureWasabiUpdater(linkedCtsToken);
 		ConfigureExchangeRateUpdater(linkedCtsToken);
 		ConfigureRpcMonitor(linkedCtsToken);
@@ -861,6 +870,9 @@ public class Global
 
 				_disposables.Dispose();
 				await _asyncDisposables.DisposeAsync().ConfigureAwait(false);
+
+				Logger.LogInfo("Dispose meter listener.");
+				_metricManager.Dispose();
 			}
 			catch (Exception ex)
 			{
