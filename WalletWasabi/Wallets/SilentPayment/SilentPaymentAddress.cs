@@ -25,11 +25,11 @@ public record SilentPaymentAddress(int Version, ECPubKey ScanKey, ECPubKey Spend
 			throw new FormatException("Wrong length");
 		}
 
-		var data = spEncoder.FromBase32(result[1..]);
+		var data = spEncoder.FromBase32(result.AsSpan(1));
 		return new SilentPaymentAddress(
 			Version: 0,
-			ScanKey: ECPubKey.Create(data[..33]),
-			SpendKey: ECPubKey.Create(data[33..]));
+			ScanKey: ECPubKey.Create(data.AsSpan(..33)),
+			SpendKey: ECPubKey.Create(data.AsSpan(33..)));
 	}
 
 	public string ToWip(Network network)
