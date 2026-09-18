@@ -1,15 +1,9 @@
 using Microsoft.Extensions.Hosting;
-using NBitcoin;
 using Nito.AsyncEx;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using WalletWasabi.Backend.Models;
 using WalletWasabi.Blockchain.Blocks;
-using WalletWasabi.Blockchain.Keys;
 using WalletWasabi.Blockchain.TransactionProcessing;
 using WalletWasabi.Blockchain.Transactions;
-using WalletWasabi.Logging;
 using WalletWasabi.Services;
 using WalletWasabi.Services.Terminate;
 using WalletWasabi.Stores;
@@ -119,33 +113,40 @@ public class WalletFilterProcessor : BackgroundService
 			if (matchFound)
 			{
 				// Wait until downloaded.
-				Logger.LogInfo($"Obtaining block {filter.Header.BlockHash}...");
-				var currentBlock = await _blockProvider(filter.Header.BlockHash, cancellationToken).ConfigureAwait(false);
-				if (currentBlock is { })
-				{
-					_eventBus.Publish(new BlockDownloaded(filter.Header.Height));
-
-					var height = new ChainHeight(filter.Header.Height);
-					var blockHash = currentBlock.GetHash();
-					var blockTime = currentBlock.Header.BlockTime;
-					var blockTransactions = currentBlock.Transactions;
-					var txsToProcess = new List<SmartTransaction>(capacity: blockTransactions.Count);
-
-					for (int i = 0; i < blockTransactions.Count; i++)
-					{
-						var tx = new SmartTransaction(blockTransactions[i], height, blockHash, blockIndex: i, firstSeen: blockTime);
-						txsToProcess.Add(tx);
-					}
-
-					_transactionProcessor.Process(txsToProcess);
-				}
-				else
-				{
-					throw new InvalidOperationException($"Block {filter.Header.BlockHash} was not found.");
-				}
+				var blockHash = filter.Header.BlockHash;
+				var blockHeight = filter.Header.Height;
+				await GetOrDownloadBlockAsync(blockHash, blockHeight, cancellationToken).ConfigureAwait(false);
 			}
 		}
+
 		return matchFound;
+	}
+
+	private async Task GetOrDownloadBlockAsync(uint256 blockHash, uint blockHeight, CancellationToken cancellationToken)
+	{
+		Logger.LogInfo($"Obtaining block {blockHash}...");
+		var currentBlock = await _blockProvider(blockHash, cancellationToken).ConfigureAwait(false);
+		if (currentBlock is not null)
+		{
+			_eventBus.Publish(new BlockDownloaded(blockHeight));
+
+			var height = new ChainHeight(blockHeight);
+			var blockTime = currentBlock.Header.BlockTime;
+			var blockTransactions = currentBlock.Transactions;
+			var txsToProcess = new List<SmartTransaction>(capacity: blockTransactions.Count);
+
+			for (int i = 0; i < blockTransactions.Count; i++)
+			{
+				var tx = new SmartTransaction(blockTransactions[i], height, blockHash, blockIndex: i, firstSeen: blockTime);
+				txsToProcess.Add(tx);
+			}
+
+			_transactionProcessor.Process(txsToProcess);
+		}
+		else
+		{
+			throw new InvalidOperationException($"Block {blockHash} was not found.");
+		}
 	}
 
 	private async void ReorgedAsync(uint256 invalidBlockHash, ChainHeight invalidBlockHeight)
