@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using WalletWasabi.Backend.Models;
+using WalletWasabi.BitcoinRpc;
 using WalletWasabi.Blockchain.Analysis.Clustering;
 using WalletWasabi.Blockchain.Blocks;
 using WalletWasabi.Blockchain.Keys;
@@ -36,8 +37,20 @@ public class Wallet : BackgroundService
 	public static WalletFactory CreateFactory(
 		Network network, FilterStore filterStore, AllTransactionStore transactionStore, FilterHeaderChain filterHeaderChain,
 		MempoolService mempoolService, ServiceConfiguration serviceConfiguration, BlockProvider blockProvider,
-		EventBus eventBus, CpfpInfoProvider cpfpInfoProvider) =>
-		keyManager => new Wallet(network, keyManager, filterStore, transactionStore, filterHeaderChain, blockProvider, mempoolService, serviceConfiguration, cpfpInfoProvider, eventBus);
+		IRPCClient? bitcoinRpcClient, EventBus eventBus, CpfpInfoProvider cpfpInfoProvider) =>
+		keyManager =>
+			new Wallet(
+				network,
+				keyManager,
+				filterStore,
+				transactionStore,
+				filterHeaderChain,
+				blockProvider,
+				bitcoinRpcClient,
+				mempoolService,
+				serviceConfiguration,
+				cpfpInfoProvider,
+				eventBus);
 
 	private Wallet(
 		Network network,
@@ -46,6 +59,7 @@ public class Wallet : BackgroundService
 		AllTransactionStore transactionStore,
 		FilterHeaderChain filterHeaderChain,
 		BlockProvider blockProvider,
+		IRPCClient? bitcoinRpcClient,
 		MempoolService mempoolService,
 		ServiceConfiguration serviceConfiguration,
 		CpfpInfoProvider cpfpInfoProvider,
@@ -60,9 +74,9 @@ public class Wallet : BackgroundService
 		_filterStore = filterStore;
 		TransactionStore = transactionStore;
 		FilterHeaderChain = filterHeaderChain;
-
+		BitcoinRpcClient = bitcoinRpcClient;
 		TransactionProcessor = new TransactionProcessor(TransactionStore, mempoolService, keyManager, ServiceConfiguration.DustThreshold, eventBus);
-		WalletFilterProcessor = new WalletFilterProcessor(keyManager, TransactionStore, _filterStore, FilterHeaderChain, TransactionProcessor, blockProvider, eventBus);
+		WalletFilterProcessor = new WalletFilterProcessor(keyManager, TransactionStore, _filterStore, FilterHeaderChain, TransactionProcessor, blockProvider, bitcoinRpcClient, eventBus);
 		Coins = TransactionProcessor.Coins;
 		BatchedPayments = new PaymentBatch();
 		OutputProvider = new PaymentAwareOutputProvider(DestinationProvider, BatchedPayments, RandomnessProviders.Secure);
@@ -90,7 +104,7 @@ public class Wallet : BackgroundService
 	private ChainHeight _lastFilterProcess = 0;
 	public AllTransactionStore TransactionStore { get; }
 	public FilterHeaderChain FilterHeaderChain { get; }
-
+	public IRPCClient? BitcoinRpcClient { get; }
 	public WalletId WalletId { get; }
 	public bool Loaded { get; private set; }
 	public KeyManager KeyManager { get; }

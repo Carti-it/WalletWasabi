@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Nito.AsyncEx;
 using WalletWasabi.Backend.Models;
+using WalletWasabi.BitcoinRpc;
 using WalletWasabi.Blockchain.Blocks;
 using WalletWasabi.Blockchain.TransactionProcessing;
 using WalletWasabi.Blockchain.Transactions;
@@ -20,6 +21,7 @@ public class WalletFilterProcessor : BackgroundService
 		FilterHeaderChain filterHeaderChain,
 		TransactionProcessor transactionProcessor,
 		BlockProvider blockProvider,
+		IRPCClient? bitcoinRpcClient,
 		EventBus eventBus)
 	{
 		_keyManager = keyManager;
@@ -27,6 +29,7 @@ public class WalletFilterProcessor : BackgroundService
 		_filterHeaderChain = filterHeaderChain;
 		_transactionProcessor = transactionProcessor;
 		_blockProvider = blockProvider;
+		_bitcoinRpcClient = bitcoinRpcClient;
 		_eventBus = eventBus;
 		_blockFilterIterator = new(filterStore);
 		_initialSynchronizationFinished = new TaskCompletionSource();
@@ -37,6 +40,7 @@ public class WalletFilterProcessor : BackgroundService
 	private readonly FilterHeaderChain _filterHeaderChain;
 	private readonly TransactionProcessor _transactionProcessor;
 	private readonly BlockProvider _blockProvider;
+	private readonly IRPCClient? _bitcoinRpcClient;
 	private readonly EventBus _eventBus;
 	private readonly BlockFilterIterator _blockFilterIterator;
 	private readonly TaskCompletionSource _initialSynchronizationFinished;

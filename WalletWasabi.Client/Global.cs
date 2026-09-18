@@ -107,6 +107,7 @@ public class Global
 			_mempoolService,
 			Config.ServiceConfiguration,
 			blockProvider,
+			_bitcoinRpcClient,
 			EventBus,
 			cpfpProvider);
 
