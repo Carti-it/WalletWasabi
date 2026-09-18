@@ -886,7 +886,7 @@ public class TransactionFactoryTests
 	}
 
 	[Fact]
-	public async Task CanPayToSilentPaymentAddressesAsync()
+	public async Task SilentPayments_CanPayToSilentPaymentAddressesAsync()
 	{
 		// Create a crediting transaction which received 1 BTC. Then it spends that UTXO to send 0.9 BTC to a
 		// silent payment address (sp1qqdpppm9jc....qulwdyd) to finally send the new UTXO to bc1q03j8...6rrpr.
@@ -936,7 +936,7 @@ public class TransactionFactoryTests
 	}
 
 	[Fact]
-	public async Task CanPayToLabeledSilentPaymentAddressesAsync()
+	public async Task SilentPayments_CanPayToLabeledSilentPaymentAddressesAsync()
 	{
 		// Create a crediting transaction which received 1 BTC. Then it spends that UTXO to send 0.9 BTC to a
 		// silent payment address (sp1qqdpppm9jc....qulwdyd) to finally send the new UTXO to bc1q03j8...6rrpr.
@@ -995,7 +995,7 @@ public class TransactionFactoryTests
 	}
 
 	[Fact]
-	public void RealMainNetTransaction()
+	public void SilentPayments_RealMainNetTransaction()
 	{
 		var mnemonic = new Mnemonic("bargain pumpkin blouse crush invest control radar install alien same shield grain");
 		var extKey = mnemonic.DeriveExtKey();
