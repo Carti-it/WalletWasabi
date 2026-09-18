@@ -155,8 +155,13 @@ public class RpcClientBase : IRPCClient
 
 	public virtual async Task<VerboseBlockInfo> GetVerboseBlockAsync(uint256 blockId, CancellationToken cancellationToken = default)
 	{
+		// BOOKMARK #1.
 		var resp = await Rpc.SendCommandAsync(RPCOperations.getblock, cancellationToken, blockId, 3).ConfigureAwait(false);
 		return RpcParser.ParseVerboseBlockResponse(resp.ResultString);
+
+		// GetVerboseBlockAsync is implemented like this:
+		// var resp = await SendCommandAsync(RPCOperations.getblock, cancellationToken, blockId, false).ConfigureAwait(false);
+		// return Block.Parse(resp.Result.ToString(), Network);
 	}
 
 	public virtual async Task<BlockFilter> GetBlockFilterAsync(uint256 blockId, CancellationToken cancellationToken = default)
