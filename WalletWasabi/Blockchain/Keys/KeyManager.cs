@@ -479,8 +479,7 @@ public class KeyManager
 			Key secret = EncryptedSecret.GetKey(password);
 			var extKey = new ExtKey(secret, ChainCode);
 
-			// Backwards compatibility:
-			MasterFingerprint ??= secret.PubKey.GetHDFingerPrint();
+			MasterFingerprint ??= secret.PubKey.GetHDFingerPrint(); // Backwards compatibility
 			DeriveTaprootExtPubKey(extKey);
 			DeriveSilentPaymentExtPubKeys(extKey);
 
