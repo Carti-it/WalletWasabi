@@ -68,7 +68,7 @@ public class SilentPaymentTests
 				var addressesTable = labels
 					.Select(label => SilentPayment.CreateLabel(scanKey, (uint) label))
 					.Select(labelSecret => new LabelInfo.Full(labelSecret, labelSecret.CreatePubKey()))
-					.Select(labelInfo => (LabelInfo: (LabelInfo)labelInfo, Address: baseAddress.DeriveAddressForLabel(labelInfo.PubKey)!)) // each label has a different address
+					.Select(labelInfo => (LabelInfo: (LabelInfo)labelInfo, Address: baseAddress.DeriveAddressForLabel(labelInfo.PubKey))) // each label has a different address
 					.Prepend((LabelInfo: new LabelInfo.None(), baseAddress))
 					.ToDictionary(keySelector, x => x.LabelInfo);
 
