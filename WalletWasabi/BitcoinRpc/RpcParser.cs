@@ -1,11 +1,11 @@
-using System.Collections.Generic;
-using System.Linq;
+using NBitcoin.DataEncoders;
 using System.Text.Json;
-using NBitcoin;
 using WalletWasabi.BitcoinRpc.Models;
 
 namespace WalletWasabi.BitcoinRpc;
 
+
+// [#SP#] Task 1: Rename RpcParser to BitcoinRpcParser.
 public static class RpcParser
 {
 	public static RpcPubkeyType ConvertPubkeyType(string? pubKeyType)
@@ -26,6 +26,9 @@ public static class RpcParser
 		};
 	}
 
+	// [#SP#] Task 2: Rename the parameter to be a JSON string.
+	// [#SP#] Task 3: Store the original response.
+	// [#SP#] Task 4: Wrap VerboseBlockInfo in VerboseBlockResponse containing "json" + a method to return `Block`
 	public static VerboseBlockInfo ParseVerboseBlockResponse(string getBlockResponse)
 	{
 		var parsed = JsonDocument.Parse(getBlockResponse).RootElement;
@@ -75,8 +78,18 @@ public static class RpcParser
 					if (txInJson.TryGetProperty("prevout", out var prevOut))
 					{
 						var scriptPubKey = prevOut.GetProperty("scriptPubKey");
+
+						var witness = txInJson.TryGetProperty("txinwitness", out var element)
+							? new WitScript(element.EnumerateArray().Select(x => Encoders.Hex.DecodeData(x.ToString())).ToArray())
+							: WitScript.Empty;
+						var scriptSig = txInJson.TryGetProperty("scriptsig", out var scriptSigElement)
+							? Script.FromHex(scriptSigElement.ToString())
+							: Script.Empty;
+
 						input = new VerboseInputInfo.Full(
 							outPoint,
+							witness,
+							scriptSig,
 							new VerboseOutputInfo(
 								value: Money.Coins(prevOut.GetProperty("value").GetDecimal()),
 								scriptPubKey: Script.FromHex(scriptPubKey.GetProperty("hex").GetString()!),
