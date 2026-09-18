@@ -157,7 +157,7 @@ public class RpcClientBase : IRPCClient
 	{
 		// BOOKMARK #1.
 		var resp = await Rpc.SendCommandAsync(RPCOperations.getblock, cancellationToken, blockId, 3).ConfigureAwait(false);
-		return RpcParser.ParseVerboseBlockResponse(resp.ResultString);
+		return BitcoinRpcParser.ParseVerboseBlockResponse(resp.ResultString);
 
 		// GetVerboseBlockAsync is implemented like this:
 		// var resp = await SendCommandAsync(RPCOperations.getblock, cancellationToken, blockId, false).ConfigureAwait(false);

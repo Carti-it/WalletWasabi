@@ -8,7 +8,7 @@ public class VerboseOutputInfo
 	{
 		Value = value;
 		ScriptPubKey = scriptPubKey;
-		PubkeyType = RpcParser.ConvertPubkeyType(pubkeyType);
+		PubkeyType = BitcoinRpcParser.ConvertPubkeyType(pubkeyType);
 	}
 
 	public Money Value { get; }

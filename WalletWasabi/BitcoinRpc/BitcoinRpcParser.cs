@@ -4,9 +4,7 @@ using WalletWasabi.BitcoinRpc.Models;
 
 namespace WalletWasabi.BitcoinRpc;
 
-
-// [#SP#] Task 1: Rename RpcParser to BitcoinRpcParser.
-public static class RpcParser
+public static class BitcoinRpcParser
 {
 	public static RpcPubkeyType ConvertPubkeyType(string? pubKeyType)
 	{

@@ -204,7 +204,7 @@ public class RpcBasedTests
 	[Fact]
 	public void ParseVerboseBlockInfo()
 	{
-		var blockInfo = RpcParser.ParseVerboseBlockResponse(RpcOutput);
+		var blockInfo = BitcoinRpcParser.ParseVerboseBlockResponse(RpcOutput);
 		Assert.Equal(2, blockInfo.Transactions.Count());
 		Assert.Single(blockInfo.Transactions.ElementAt(0).Inputs);
 		Assert.Equal(2, blockInfo.Transactions.ElementAt(0).Outputs.Count());
