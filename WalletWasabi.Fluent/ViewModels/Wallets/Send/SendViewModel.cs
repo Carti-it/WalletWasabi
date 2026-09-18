@@ -606,7 +606,7 @@ public partial class SendViewModel : RoutableViewModel
 				break;
 
 			case Address.SilentPayment silentPayment:
-				To = silentPayment.Address.ToWip(_walletModel.Network);
+				To = silentPayment.Address.ToWif(_walletModel.Network);
 				DisplaySilentPaymentInfo = _parameters.Donate;
 				break;
 

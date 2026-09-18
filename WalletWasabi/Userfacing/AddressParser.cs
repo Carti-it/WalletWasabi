@@ -16,7 +16,7 @@ public abstract record Address
 		this switch
 		{
 			Bitcoin bitcoin => bitcoin.Address.ToString(),
-			SilentPayment sp => sp.Address.ToWip(network),
+			SilentPayment sp => sp.Address.ToWif(network),
 			Bip21Uri bip21 => UriToString(bip21),
 			_ => throw new ArgumentException("Unknown address type.")
 		};
@@ -26,7 +26,7 @@ public abstract record Address
 		{
 			Bip21Uri bip21 => bip21.Address.ToWif(network),
 			Bitcoin bitcoin => bitcoin.Address.ToString(),
-			SilentPayment sp => sp.Address.ToWip(network),
+			SilentPayment sp => sp.Address.ToWif(network),
 			_ => throw new ArgumentException("Unknown address type.")
 		};
 

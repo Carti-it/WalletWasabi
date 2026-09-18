@@ -1,4 +1,3 @@
-using NBitcoin;
 using NBitcoin.DataEncoders;
 using NBitcoin.Secp256k1;
 
@@ -32,16 +31,22 @@ public record SilentPaymentAddress(int Version, ECPubKey ScanKey, ECPubKey Spend
 			SpendKey: ECPubKey.Create(data.AsSpan(33..)));
 	}
 
-	public string ToWip(Network network)
+	/// <summary>
+	/// Export the silent address to the wallet import format.
+	/// </summary>
+	public string ToWif(Network network)
 	{
+		Span<byte> keysData = stackalloc byte[66];
+		ScanKey.ToBytes().CopyTo(keysData);
+		SpendKey.ToBytes().CopyTo(keysData[33..]);
+
 		var spEncoder = network.GetSilentPaymentBech32Encoder();
-		var data = new byte[66];
-		Buffer.BlockCopy(ScanKey.ToBytes(), 0, data, 0, 33);
-		Buffer.BlockCopy(SpendKey.ToBytes(),0, data,33, 33);
-		var base32 = spEncoder.ToBase32(data);
-		var buffer = new byte[base32.Length + 1];
-		buffer[0] = (byte) Version;
-		Buffer.BlockCopy(base32, 0, buffer, 1, base32.Length);
+		var base32 = spEncoder.ToBase32(keysData);
+
+		Span<byte> buffer = stackalloc byte[base32.Length + 1];
+		buffer[0] = (byte)Version;
+		base32.CopyTo(buffer[1..]);
+
 		return spEncoder.EncodeRaw(buffer, Bech32EncodingType.BECH32M);
 	}
 

@@ -13,7 +13,7 @@ public abstract record Destination
 		this switch
 		{
 			Loudly l when l.ScriptPubKey.GetDestinationAddress(network) is {} addr => addr.ToString(),
-			Silent s => s.Address.ToWip(network),
+			Silent s => s.Address.ToWif(network),
 			_ => throw new ArgumentException("Unknown destination type")
 		};
 

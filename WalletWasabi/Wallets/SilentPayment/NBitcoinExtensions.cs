@@ -9,7 +9,7 @@ namespace WalletWasabi.Wallets.SilentPayment;
 public static class NBitcoinExtensions
 {
 	public static SilentPaymentBech32Encoder GetSilentPaymentBech32Encoder(this Network network) =>
-		new (Encoders.ASCII.DecodeData(GetHrpForNetwork(network)));
+		new(Encoders.ASCII.DecodeData(GetHrpForNetwork(network)));
 
 	private static string GetHrpForNetwork(Network network)
 	{
