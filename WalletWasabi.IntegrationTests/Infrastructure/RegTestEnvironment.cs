@@ -137,6 +137,7 @@ public sealed class RegTestEnvironment : IAsyncDisposable
 			MempoolService,
 			ServiceConfiguration,
 			CreateBlockProvider(),
+			bitcoinRpcClient: null,
 			EventBus,
 			CpfpInfoProvider);
 
