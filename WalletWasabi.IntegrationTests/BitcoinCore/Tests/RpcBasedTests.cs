@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NBitcoin;
-using NBitcoin.RPC;
 using WalletWasabi.BitcoinRpc;
 using WalletWasabi.BitcoinRpc.Models;
 using WalletWasabi.Extensions;
@@ -16,7 +15,7 @@ public class RpcBasedTests
 {
 	#region Mocked RPC response
 
-	private static string RpcOutput = """
+	private static string GetBlockVerbosity3Output = """
 		{
 			"hash": "27cac34bec2bfc3422c352d558b4db29e6d7e8114db2dbc955df06a63cda82fe",
 			"confirmations": 1,
@@ -204,28 +203,28 @@ public class RpcBasedTests
 	[Fact]
 	public void ParseVerboseBlockInfo()
 	{
-		var blockInfo = BitcoinRpcParser.ParseVerboseBlockResponse(RpcOutput);
-		Assert.Equal(2, blockInfo.Transactions.Count());
-		Assert.Single(blockInfo.Transactions.ElementAt(0).Inputs);
-		Assert.Equal(2, blockInfo.Transactions.ElementAt(0).Outputs.Count());
-		Assert.Single(blockInfo.Transactions.ElementAt(1).Inputs);
-		Assert.Equal(2, blockInfo.Transactions.ElementAt(1).Outputs.Count());
+		var blockInfo = RpcParser.ParseVerboseBlockResponse(GetBlockVerbosity3Output, Network.Main);
+		Assert.Equal(2, blockInfo.Transactions.Count);
+		Assert.Single(blockInfo.Transactions[0].Inputs);
+		Assert.Equal(2, blockInfo.Transactions[0].Outputs.Count());
+		Assert.Single(blockInfo.Transactions[1].Inputs);
+		Assert.Equal(2, blockInfo.Transactions[1].Outputs.Count());
 
-		var coinbase = Assert.IsType<VerboseInputInfo.Coinbase>(blockInfo.Transactions.ElementAt(0).Inputs.ElementAt(0));
+		var coinbase = Assert.IsType<VerboseInputInfo.Coinbase>(blockInfo.Transactions[0].Inputs.ElementAt(0));
 		Assert.Equal("01660101", coinbase.Message);
-		Assert.Equal(RpcPubkeyType.TxPubkeyhash, blockInfo.Transactions.ElementAt(0).Outputs.ElementAt(0).PubkeyType);
-		Assert.Equal(RpcPubkeyType.TxNullData, blockInfo.Transactions.ElementAt(0).Outputs.ElementAt(1).PubkeyType);
+		Assert.Equal(RpcPubkeyType.TxPubkeyhash, blockInfo.Transactions[0].Outputs.ElementAt(0).PubkeyType);
+		Assert.Equal(RpcPubkeyType.TxNullData, blockInfo.Transactions[0].Outputs.ElementAt(1).PubkeyType);
 
-		var in0 = blockInfo.Transactions.ElementAt(1).Inputs.ElementAt(0);
+		var in0 = blockInfo.Transactions[1].Inputs.ElementAt(0);
 		var inputInfo = Assert.IsType<VerboseInputInfo.Full>(in0);
 		var prevOut0 = inputInfo.PrevOut;
-		Assert.Equal(Money.Coins(50), prevOut0?.Value);
-		Assert.Equal(RpcPubkeyType.TxPubkeyhash, prevOut0?.PubkeyType);
+		Assert.Equal(Money.Coins(50), prevOut0.Value);
+		Assert.Equal(RpcPubkeyType.TxPubkeyhash, prevOut0.PubkeyType);
 
-		Assert.Equal(Money.Coins((decimal)48.99995500), blockInfo.Transactions.ElementAt(1).Outputs.ElementAt(0).Value);
-		Assert.Equal(Money.Coins((decimal)1.00000000), blockInfo.Transactions.ElementAt(1).Outputs.ElementAt(1).Value);
-		Assert.Equal(RpcPubkeyType.TxPubkeyhash, blockInfo.Transactions.ElementAt(1).Outputs.ElementAt(0).PubkeyType);
-		Assert.Equal(RpcPubkeyType.TxPubkeyhash, blockInfo.Transactions.ElementAt(1).Outputs.ElementAt(1).PubkeyType);
+		Assert.Equal(Money.Coins((decimal)48.99995500), blockInfo.Transactions[1].Outputs.ElementAt(0).Value);
+		Assert.Equal(Money.Coins((decimal)1.00000000), blockInfo.Transactions[1].Outputs.ElementAt(1).Value);
+		Assert.Equal(RpcPubkeyType.TxPubkeyhash, blockInfo.Transactions[1].Outputs.ElementAt(0).PubkeyType);
+		Assert.Equal(RpcPubkeyType.TxPubkeyhash, blockInfo.Transactions[1].Outputs.ElementAt(1).PubkeyType);
 	}
 
 	[Fact]
