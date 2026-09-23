@@ -433,6 +433,19 @@ public class KeyManager
 		}
 	}
 
+	public bool GetIsSilentPaymentReceivingEnabled() => true;
+
+	public IEnumerable<byte[]> GetSilentPaymentSynchronizationScripts(byte[] tweakData)
+	{
+		var tweak = ECPubKey.Create(tweakData);
+
+		return GetSilentPaymentScanData()
+			.Select(x => (x.Address.SpendKey, SharedSecret: SilentPayment.ComputeSharedSecretReceiver(tweak, x.ScanSecret)))
+			.Select(x => SilentPayment.ComputePubKey(x.SpendKey, x.SharedSecret, 0))
+			.Select(x => new TaprootPubKey(x.ToBytes()).ScriptPubKey)
+			.Select(x => x.ToCompressedBytes());
+	}
+
 	public bool TryGetKeyForScriptPubKey(Script scriptPubKey, [NotNullWhen(true)] out HdPubKey? hdPubKey)
 	{
 		lock (_criticalStateLock)
@@ -556,6 +569,14 @@ public class KeyManager
 			var address = new SilentPaymentAddress(0, scanKey.PubKey, spendKey.PubKey);
 			var scanSecret = extKey.Derive(scanKey.FullKeyPath);
 			_silentPaymentScanData.Add((address, ECPrivKey.Create(scanSecret.PrivateKey.ToBytes())));
+		}
+	}
+
+	public (SilentPaymentAddress Address, ECPrivKey ScanSecret)[] GetSilentPaymentScanData()
+	{
+		lock (_criticalStateLock)
+		{
+			return _silentPaymentScanData.ToArray();
 		}
 	}
 

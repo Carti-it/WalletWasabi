@@ -1,7 +1,8 @@
-using System.Text;
 using NBitcoin.Crypto;
 using NBitcoin.DataEncoders;
 using NBitcoin.Secp256k1;
+using System.Text;
+using WalletWasabi.BitcoinRpc.Models;
 
 namespace WalletWasabi.Wallets.SilentPayment;
 
@@ -11,6 +12,38 @@ public static class SilentPayment
 		Encoders.Hex.DecodeData("50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0");
 
 	private const uint K_MAX = 2323;
+
+	public static IEnumerable<byte[]> BuildSilentPaymentTweakData(VerboseBlockInfo block)
+	{
+		const long TaprootDust = 1_000;
+		foreach (var (tx, i) in block.Transactions.Select((tx, i) => (tx, i)))
+		{
+			var inputs = tx.Inputs.OfType<VerboseInputInfo.Full>().ToList();
+			if (inputs.Count < tx.Inputs.Count())
+			{
+				continue;
+			}
+
+			var hasAtLeastOneNonDustTaprootOutput = tx.Outputs.Any(x => x.Value.Satoshi >= TaprootDust && x.ScriptPubKey.IsScriptType(ScriptType.Taproot));
+			if (!hasAtLeastOneNonDustTaprootOutput)
+			{
+				continue;
+			}
+
+			var pubKeys = inputs
+				.Select(input => SilentPayment.ExtractPubKey(input.ScriptSig, input.WitScript, input.PrevOut.ScriptPubKey))
+				.DropNulls()
+				.ToArray();
+
+			if (pubKeys.Length <= 0)
+			{
+				continue;
+			}
+
+			var prevOuts = inputs.Select(x => x.OutPoint).ToArray();
+			yield return BitConverter.GetBytes((ushort)i).Concat(SilentPayment.TweakData(prevOuts, pubKeys).ToBytes()).ToArray();
+		}
+	}
 
 	public static ECPubKey ComputeSharedSecretReceiver(OutPoint[] prevOuts, GE[] pubKeys, ECPrivKey b) =>
 		ComputeSharedSecret(prevOuts, A: SumPublicKeys(pubKeys), b);
@@ -66,7 +99,7 @@ public static class SilentPayment
 		return silentPaymentOutputs.ToDictionary(x => x.Key, x => x.Select(y => new TaprootPubKey(y.PubKey.ToBytes()).ScriptPubKey).ToArray());
 	}
 
-	private static bool IsEligible(Transaction tx) =>
+	public static bool IsEligible(Transaction tx) =>
 		tx.Outputs.Any(x => x.ScriptPubKey.IsScriptType(ScriptType.Taproot));
 
 	public static ECPrivKey CreateLabel(ECPrivKey scanKey, uint label) =>

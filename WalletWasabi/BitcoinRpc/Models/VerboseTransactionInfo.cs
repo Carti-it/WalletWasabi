@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using NBitcoin;
-
 namespace WalletWasabi.BitcoinRpc.Models;
 
 public class VerboseTransactionInfo

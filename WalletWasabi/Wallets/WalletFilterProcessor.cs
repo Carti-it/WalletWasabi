@@ -105,9 +105,51 @@ public class WalletFilterProcessor : BackgroundService
 		}
 	}
 
+	/// <param name="tweakData">Tweak data for each eligible transaction of the block to process.</param>
+	private IEnumerable<byte[]> GetSilentPaymentScriptPubKeysToTest(byte[][] tweakData) =>
+		tweakData.SelectMany(_keyManager.GetSilentPaymentSynchronizationScripts);
+
 	private async Task<bool> ProcessFilterModelAsync(FilterModel filter, CancellationToken cancellationToken)
 	{
+		var blockHash = filter.Header.BlockHash;
 		var toTestKeys = _keyManager.UnsafeGetSynchronizationInfos();
+
+		if (_keyManager.GetIsSilentPaymentReceivingEnabled() && _bitcoinRpcClient is not null)
+		{
+			var verboseBlockInfo = await _bitcoinRpcClient.GetVerboseBlockAsync(blockHash, cancellationToken).ConfigureAwait(false);
+
+			var tweakDataForTransactions = SilentPayment.SilentPayment.BuildSilentPaymentTweakData(verboseBlockInfo);
+
+			var scanData = _keyManager.GetSilentPaymentScanData();
+			var silentPaymentAddresses = scanData.Select(x => x.Address).ToArray();
+
+			/*
+			foreach (var spendingTx in verboseBlockInfo.Transactions)
+			{
+				if (SilentPayment.SilentPayment.IsEligible(spendingTx))
+				{
+					var prevOuts = spendingTx.Inputs.Select(x => x.PrevOut).ToArray();
+					var pubKeys = spendingTx.Inputs
+						.Select(x => SilentPayment.SilentPayment.ExtractPubKey(x.ScriptSig, x.WitScript, null))
+						.DropNulls()
+						.ToArray();
+
+					var tweakData = SilentPayment.SilentPayment.TweakData(prevOuts, pubKeys);
+
+					foreach (var scanDataItem in scanData)
+					{
+						var dictionary = SilentPayment.SilentPayment.ExtractSilentPaymentScriptPubKeys([scanDataItem.Address], tweakData, spendingTx, scanDataItem.ScanSecret);
+
+						if (dictionary.Count > 0)
+						{
+							return true;
+						}
+					}
+				}
+			}
+			*/
+		}
+
 
 		var matchFound = false;
 		if (toTestKeys.Length != 0)
@@ -117,40 +159,37 @@ public class WalletFilterProcessor : BackgroundService
 			if (matchFound)
 			{
 				// Wait until downloaded.
-				var blockHash = filter.Header.BlockHash;
+				var block = await GetBlockAsync(blockHash, cancellationToken).ConfigureAwait(false);
+
 				var blockHeight = filter.Header.Height;
-				await GetOrDownloadBlockAsync(blockHash, blockHeight, cancellationToken).ConfigureAwait(false);
+				_eventBus.Publish(new BlockDownloaded(blockHeight));
+
+				var height = new ChainHeight(blockHeight);
+				var blockTime = block.Header.BlockTime;
+				var blockTransactions = block.Transactions;
+				var txsToProcess = new List<SmartTransaction>(capacity: blockTransactions.Count);
+
+				for (int i = 0; i < blockTransactions.Count; i++)
+				{
+					var tx = new SmartTransaction(blockTransactions[i], height, blockHash, blockIndex: i, firstSeen: blockTime);
+					txsToProcess.Add(tx);
+				}
+
+				_transactionProcessor.Process(txsToProcess);
 			}
 		}
 
 		return matchFound;
 	}
 
-	private async Task GetOrDownloadBlockAsync(uint256 blockHash, uint blockHeight, CancellationToken cancellationToken)
+	private async Task<Block> GetBlockAsync(uint256 blockHash, CancellationToken cancellationToken)
 	{
 		Logger.LogInfo($"Obtaining block {blockHash}...");
-		var currentBlock = await _blockProvider(blockHash, cancellationToken).ConfigureAwait(false);
-		if (currentBlock is not null)
-		{
-			_eventBus.Publish(new BlockDownloaded(blockHeight));
+		var block = await _blockProvider(blockHash, cancellationToken).ConfigureAwait(false);
 
-			var height = new ChainHeight(blockHeight);
-			var blockTime = currentBlock.Header.BlockTime;
-			var blockTransactions = currentBlock.Transactions;
-			var txsToProcess = new List<SmartTransaction>(capacity: blockTransactions.Count);
-
-			for (int i = 0; i < blockTransactions.Count; i++)
-			{
-				var tx = new SmartTransaction(blockTransactions[i], height, blockHash, blockIndex: i, firstSeen: blockTime);
-				txsToProcess.Add(tx);
-			}
-
-			_transactionProcessor.Process(txsToProcess);
-		}
-		else
-		{
-			throw new InvalidOperationException($"Block {blockHash} was not found.");
-		}
+		return block is not null
+			? block
+			: throw new InvalidOperationException($"Block {blockHash} was not found.");
 	}
 
 	private async void ReorgedAsync(uint256 invalidBlockHash, ChainHeight invalidBlockHeight)
