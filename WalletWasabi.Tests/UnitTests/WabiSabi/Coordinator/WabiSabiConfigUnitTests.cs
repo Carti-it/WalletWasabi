@@ -61,6 +61,7 @@ public class WabiSabiConfigUnitTests
 			  "AllowP2shOutputs": false,
 			  "AllowP2wshOutputs": false,
 			  "DelayTransactionSigning": false,
+			  "TrimCoordinatorOutput": false,
 			  "AnnouncerConfig": {
 			    "CoordinatorName": "Coordinator",
 			    "IsEnabled": false,
