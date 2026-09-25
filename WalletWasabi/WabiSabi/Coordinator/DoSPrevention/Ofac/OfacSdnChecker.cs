@@ -45,7 +45,7 @@ public class OfacSdnChecker : PeriodicRunner
 
 	protected override async Task ActionAsync(CancellationToken cancellationToken)
 	{
-		for (int i = 0; i < 3; i++)
+		for (int i = 1; i <= 3; i++)
 		{
 			try
 			{
@@ -69,6 +69,22 @@ public class OfacSdnChecker : PeriodicRunner
 					using var xmlStream = Unzip(zipStream);
 
 					list = await _ofacParser.GetSanctionedBtcAddressesAsync(xmlStream, cancellationToken).ConfigureAwait(false);
+
+					list = list.Where(address =>
+						{
+							// Check if the Bitcoin address is really a Bitcoin address.
+							try
+							{
+								_ = BitcoinAddress.Create(address, Network.Main);
+								return true;
+							}
+							catch
+							{
+								Logger.LogDebug($"OFAC sanctioned address '{address}' is not a valid Bitcoin address. Skipping.");
+								return false;
+							}
+						})
+						.ToList();
 				}
 				else
 				{
@@ -76,6 +92,7 @@ public class OfacSdnChecker : PeriodicRunner
 					list = ["bcrt1qytypjcqy7gdv5lmz95q04r0tus3ehpty7nmptd"];
 				}
 
+				Logger.LogDebug($"List of sanctioned addresses: {string.Join(", ", list)}");
 				var parameters = new ScanTxoutSetParameters()
 				{
 					Descriptors = list.Select(addr => new ScanTxoutDescriptor($"addr({addr})")).ToArray()
