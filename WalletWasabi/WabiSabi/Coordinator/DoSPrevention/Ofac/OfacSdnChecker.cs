@@ -110,6 +110,7 @@ public class OfacSdnChecker : PeriodicRunner
 						var outpoint = output.Coin.Outpoint;
 						var txid = outpoint.Hash;
 						var amount = output.Coin.Amount;
+						outPointsToBan.Add(outpoint);
 
 						Logger.LogInfo($"Found UTXO for sanctioned address {address}: {amount} BTC in transaction {txid} at vout {outpoint.N}.");
 					}
