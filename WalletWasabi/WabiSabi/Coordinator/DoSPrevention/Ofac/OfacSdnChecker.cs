@@ -70,7 +70,9 @@ public class OfacSdnChecker : PeriodicRunner
 
 					list = await _ofacParser.GetSanctionedBtcAddressesAsync(xmlStream, cancellationToken).ConfigureAwait(false);
 
-					list = list.Where(address =>
+					list = list
+						.Where(address => !address.StartsWith('1') && !address.StartsWith('3')) // Ignore ineligible address types which cannot be registered anyway.
+						.Where(address =>
 						{
 							// Check if the Bitcoin address is really a Bitcoin address.
 							try
