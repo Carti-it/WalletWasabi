@@ -109,6 +109,15 @@ public record ConstructionState : MultipartyTransactionState
 			var tx = state.CreateUnsignedTransaction();
 			var txHex = tx.ToHex();
 
+			Logger.LogInfo("Required fee is less than required.");
+			Logger.LogInfo($"* Balance: {Balance}");
+			Logger.LogInfo($"* RequiredFee: {RequiredFee}");
+			Logger.LogInfo($"* Parameters.MiningFeeRate: {Parameters.MiningFeeRate}");
+			Logger.LogInfo($"* Transaction balance: {Inputs.Sum(x => x.Amount)} - {Outputs.Sum(x => x.Value)} = {Balance}");
+			Logger.LogInfo($"* Estimated transaction vsize: {MultipartyTransactionParameters.SharedOverhead} + {EstimatedInputsVsize} + {OutputsVsize} = {EstimatedVsize}");
+			Logger.LogInfo($"* Unpaid shared overhead: {UnpaidSharedOverhead}");
+			Logger.LogInfo($"* Transaction HEX: {txHex}");
+
 			throw new WabiSabiProtocolException(
 				WabiSabiProtocolErrorCode.InsufficientFees,
 				$"Fee {Balance} is less than the {RequiredFee} required at {Parameters.MiningFeeRate}. RawTx: {txHex}");
