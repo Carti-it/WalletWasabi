@@ -110,9 +110,15 @@ public record ConstructionState : MultipartyTransactionState
 			var tx = state.CreateUnsignedTransaction();
 			var txHex = tx.ToHex();
 
-			throw new WabiSabiProtocolException(
-				WabiSabiProtocolErrorCode.InsufficientFees,
-				$"Effective fee rate {EffectiveFeeRate} is less than required {Parameters.MiningFeeRate}. RawTx: {txHex}");
+			Logger.LogInfo("Effective fee rate is less than required.");
+			Logger.LogInfo($"* Effective fee-rate: {EffectiveFeeRate}");
+			Logger.LogInfo($"* Parameters.MiningFeeRate: {Parameters.MiningFeeRate}");
+			Logger.LogInfo($"* Transaction balance: {Inputs.Sum(x => x.Amount)} - {Outputs.Sum(x => x.Value)} = {Balance}");
+			Logger.LogInfo($"* Estimated transaction vsize: {MultipartyTransactionParameters.SharedOverhead} + {EstimatedInputsVsize} + {OutputsVsize} = {EstimatedVsize}");
+			Logger.LogInfo($"* Unpaid shared overhead: {UnpaidSharedOverhead}");
+			Logger.LogInfo($"* Transaction HEX: {txHex}");
+
+			throw new WabiSabiProtocolException(WabiSabiProtocolErrorCode.InsufficientFees, $"Effective fee rate {EffectiveFeeRate} is less than required {Parameters.MiningFeeRate}. RawTx: {txHex}");
 		}
 
 		return new SigningState(Parameters, Events);
