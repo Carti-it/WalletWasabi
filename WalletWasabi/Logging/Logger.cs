@@ -59,6 +59,8 @@ public static class Logger
 		}
 	}
 
+	public static LogLevel MinimumLogLevel => Core.Value.MinimumLevel;
+
 	public static void LogTrace(string message, object? ctx = null, [CallerFilePath] string callerFilePath = "",
 		[CallerLineNumber] int callerLineNumber = -1) =>
 		Core.Value.Log(LogLevel.Trace, message, ctx, callerFilePath, callerLineNumber);
