@@ -42,5 +42,5 @@ public enum LogLevel
 	/// For failures that require immediate attention.
 	/// Examples: data loss scenarios, out of disk space.
 	/// </summary>
-	Critical
+	Critical,
 }

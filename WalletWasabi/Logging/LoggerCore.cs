@@ -1,15 +1,12 @@
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Threading;
-using WalletWasabi.Helpers;
 
 namespace WalletWasabi.Logging;
 
 public class LoggerCore
 {
-	private LogLevel MinimumLevel { get; }
+	public LogLevel MinimumLevel { get; }
 	private ImmutableHashSet<LogMode> Modes { get; }
 	public string FilePath { get; }
 	public string EntrySeparator { get; } = Environment.NewLine;
