@@ -12,6 +12,7 @@ using WalletWasabi.WabiSabi.Coordinator.PostRequests;
 using WalletWasabi.WabiSabi.Coordinator.Rounds;
 using WalletWasabi.WabiSabi.Models;
 using WalletWasabi.WabiSabi.Models.MultipartyTransaction;
+using static WalletWasabi.Logging.LoggerTools;
 
 namespace WalletWasabi.Coordinator.WabiSabi;
 
@@ -378,7 +379,7 @@ public partial class Arena : IWabiSabiApiRequestHandler
 		var banningTime = _prison.GetBanTimePeriod(input, round.Config.GetDoSConfiguration());
 		if (banningTime.Includes(DateTimeOffset.UtcNow))
 		{
-			Logger.LogInfo($"{input} rejected. Banned until {banningTime.EndTime}", round);
+			Logger.LogInfo(FormatLog($"{input} rejected. Banned until {banningTime.EndTime}", round));
 			throw new WabiSabiProtocolException(WabiSabiProtocolErrorCode.InputBanned, exceptionData: new InputBannedExceptionData(banningTime.EndTime));
 		}
 	}
