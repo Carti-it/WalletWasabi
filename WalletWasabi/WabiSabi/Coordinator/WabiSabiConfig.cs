@@ -172,14 +172,17 @@ public class WabiSabiConfig : ConfigBase
 		return scriptTypes.ToImmutableSortedSet();
 	}
 
-	public static WabiSabiConfig? TryLoadFile(string filePath)
+	public static WabiSabiConfig? TryLoadFile(string filePath, out string? sourceJson)
 	{
 		try
 		{
-			using var cfgFile = File.Open(filePath, FileMode.Open, FileAccess.Read);
-			var decoder = JsonDecoder.FromStream(Decode.WabiSabiConfig(filePath));
-			var decodingResult = decoder(cfgFile);
-			return decodingResult.Match(cfg => cfg, error => throw new InvalidOperationException(error));
+			var fileContents = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
+			var decoder = JsonDecoder.FromString(Decode.WabiSabiConfig(filePath));
+			var decodingResult = decoder(fileContents);
+			var result = decodingResult.Match(cfg => cfg, error => throw new InvalidOperationException(error));
+			sourceJson = fileContents;
+
+			return result;
 		}
 		catch (Exception ex)
 		{
@@ -192,6 +195,7 @@ public class WabiSabiConfig : ConfigBase
 
 			Logger.LogInfo($"Default config was stored to '{defaultFilePath}'. Use the config to start fresh.");
 
+			sourceJson = null;
 			return null;
 		}
 	}
