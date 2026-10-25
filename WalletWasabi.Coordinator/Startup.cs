@@ -14,6 +14,7 @@ using System.IO;
 using System.Net.Http;
 using WalletWasabi.BitcoinRpc;
 using WalletWasabi.Cache;
+using WalletWasabi.Coordinator.Services;
 using WalletWasabi.Coordinator.WabiSabi;
 using WalletWasabi.Discoverability;
 using WalletWasabi.Extensions;
@@ -117,6 +118,7 @@ public class Startup(IConfiguration configuration)
 			return (config, feeRate, minInputCountByRound) => RoundParameters.Create(config, feeRate);
 		});
 		services.AddBackgroundService<Arena>();
+		services.AddBackgroundService<CoinBanningService>();
 
 		if (config.AnnouncerConfig.IsEnabled)
 		{
