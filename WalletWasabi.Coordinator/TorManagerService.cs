@@ -41,10 +41,15 @@ public class TorManagerService(TorSettings torSettings, WabiSabiConfig config, I
 			{
 				(onionServiceId, var privateKey) = await torControlClient
 					.CreateKeylessOnionServiceAsync(80, uri.Port, cancellationToken).ConfigureAwait(false);
+
 				config.OnionServicePrivateKey = privateKey;
 				config.AnnouncerConfig.CoordinatorUri = $"http://{onionServiceId}.onion";
 				config.AnnouncerConfig.ReadMoreUri = $"http://{onionServiceId}.onion";
-				config.ToFile();
+
+				Logger.LogWarning($"Modify your configuration file to contain the following values if you want to persist this onion address:");
+				Logger.LogWarning($"  OnionServicePrivateKey = \"{privateKey}\"");
+				Logger.LogWarning($"  AnnouncerConfig.CoordinatorUri = \"http://{onionServiceId}.onion\"");
+				Logger.LogWarning($"  AnnouncerConfig.ReadMoreUri= \"http://{onionServiceId}.onion\"");
 			}
 
 			Logger.LogInfo($"Coordinator server listening on http://{onionServiceId}.onion");

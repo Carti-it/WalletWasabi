@@ -1,6 +1,4 @@
-using System.IO;
 using System.Threading.Tasks;
-using WalletWasabi.Tests.Helpers;
 using WalletWasabi.WabiSabi.Coordinator;
 using Xunit;
 
@@ -11,9 +9,7 @@ public class WabiSabiConfigUnitTests
 	[Fact]
 	public async Task LoadFileTestsAsync()
 	{
-		var dir = await Common.GetEmptyWorkDirAsync();
-
-		var config = new WabiSabiConfig(Path.Combine(dir, "config.json"));
+		var config = new WabiSabiConfig();
 		var json = config.EncodeAsJson().ReplaceLineEndings("\n");
 
 		var expectedJson = $$"""

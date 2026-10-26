@@ -10,6 +10,7 @@ using NBitcoin.RPC;
 using Nito.AsyncEx;
 using WalletWasabi.Bases;
 using WalletWasabi.BitcoinRpc;
+using WalletWasabi.Coordinator.Configuration;
 using WalletWasabi.Crypto.Randomness;
 using WalletWasabi.Extensions;
 using WalletWasabi.FeeRateEstimation;
@@ -29,7 +30,7 @@ namespace WalletWasabi.Coordinator.WabiSabi;
 public partial class Arena : PeriodicRunner
 {
 	public Arena(
-		WabiSabiConfigProvider configProvider,
+		WabiSabiConfigManager configProvider,
 		IRPCClient rpc,
 		Prison prison,
 		RoundParametersFactory roundParametersFactory,
@@ -51,7 +52,7 @@ public partial class Arena : PeriodicRunner
 	private ImmutableList<RoundState> _roundStates = [];
 	private readonly ConcurrentQueue<uint256> _disruptedRounds = new();
 	private readonly AsyncLock _asyncLock = new();
-	private readonly WabiSabiConfigProvider _configProvider;
+	private readonly WabiSabiConfigManager _configProvider;
 	private readonly WabiSabiConfig _staticConfig;
 	private readonly IRPCClient _rpc;
 	private readonly Prison _prison;

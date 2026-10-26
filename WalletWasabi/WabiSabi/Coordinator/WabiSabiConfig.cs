@@ -9,18 +9,9 @@ namespace WalletWasabi.WabiSabi.Coordinator;
 
 public record WabiSabiConfig
 {
-	private readonly Lock _fileLock = new();
-
 	public WabiSabiConfig()
 	{
 	}
-
-	public WabiSabiConfig(string filePath)
-	{
-		FilePath = filePath;
-	}
-
-	public string? FilePath { get; }
 
 	public Network Network { get; init; } = Network.Main;
 
@@ -128,10 +119,6 @@ public record WabiSabiConfig
 	public void MakeNextCoordinatorScriptDirty()
 	{
 		CoordinatorExtPubKeyCurrentDepth++;
-		if (!string.IsNullOrWhiteSpace(FilePath))
-		{
-			ToFile();
-		}
 	}
 
 	public DoSConfiguration GetDoSConfiguration() =>
@@ -179,8 +166,8 @@ public record WabiSabiConfig
 	{
 		try
 		{
-			var fileContents = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
-			var decoder = JsonDecoder.FromString(Decode.WabiSabiConfig(filePath));
+			var fileContents = File.ReadAllText(filePath, Encoding.UTF8);
+			var decoder = JsonDecoder.FromString(Decode.WabiSabiConfig());
 			var decodingResult = decoder(fileContents);
 			var result = decodingResult.Match(cfg => cfg, error => throw new InvalidOperationException(error));
 			sourceJson = fileContents;
@@ -193,8 +180,9 @@ public record WabiSabiConfig
 			Logger.LogWarning(ex);
 
 			var defaultFilePath = Path.ChangeExtension(filePath, ".Default.json");
-			var defaultConfig = new WabiSabiConfig(defaultFilePath);
-			defaultConfig.ToFile();
+			var defaultConfig = new WabiSabiConfig();
+			var json = defaultConfig.EncodeAsJson();
+			File.WriteAllText(defaultFilePath, json, Encoding.UTF8);
 
 			Logger.LogInfo($"Default config was stored to '{defaultFilePath}'. Use the config to start fresh.");
 
@@ -205,15 +193,4 @@ public record WabiSabiConfig
 
 	public string EncodeAsJson() =>
 		JsonEncoder.ToReadableString(this, Encode.WabiSabiConfig);
-
-	public void ToFile()
-	{
-		if (FilePath is not null)
-		{
-			lock (_fileLock)
-			{
-				File.WriteAllText(FilePath, EncodeAsJson(), Encoding.UTF8);
-			}
-		}
-	}
 }

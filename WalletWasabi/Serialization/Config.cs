@@ -105,8 +105,8 @@ public static partial class Decode
 			Key = get.Required("Key", String)
 		});
 
-	public static Decoder<WabiSabiConfig> WabiSabiConfig(string filePath) =>
-		Object(get => new WabiSabiConfig(filePath)
+	public static Decoder<WabiSabiConfig> WabiSabiConfig() =>
+		Object(get => new WabiSabiConfig()
 		{
 			Network = get.Required("Network", Network),
 			MainNetBitcoinRpcUri = get.Required("MainNetBitcoinRpcUri", String),

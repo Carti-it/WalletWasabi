@@ -14,6 +14,7 @@ using System.IO;
 using System.Net.Http;
 using WalletWasabi.BitcoinRpc;
 using WalletWasabi.Cache;
+using WalletWasabi.Coordinator.Configuration;
 using WalletWasabi.Coordinator.Services;
 using WalletWasabi.Coordinator.WabiSabi;
 using WalletWasabi.Discoverability;
@@ -23,9 +24,7 @@ using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
 using WalletWasabi.Models;
 using WalletWasabi.Serialization;
-using WalletWasabi.Services;
 using WalletWasabi.Tor;
-using WalletWasabi.WabiSabi.Coordinator;
 using WalletWasabi.WabiSabi.Coordinator.DoSPrevention;
 using WalletWasabi.WabiSabi.Coordinator.DoSPrevention.Ofac;
 using WalletWasabi.WabiSabi.Coordinator.Rounds;
@@ -64,8 +63,12 @@ public class Startup(IConfiguration configuration)
 
 		services.AddControllers();
 
-		var configProvider = new WabiSabiConfigProvider(Path.Combine(dataDir, "Config.json"));
-		services.AddSingleton(configProvider);
+#pragma warning disable CA2000 // Dispose objects before losing scope – The manager is disposed using DI.
+		var configProvider = new WabiSabiConfigManager(Path.Combine(dataDir, "Config.json"));
+#pragma warning restore CA2000 // Dispose objects before losing scope
+
+		// It's important to register the singleton like this, otherwise it's not owned by the DIC.
+		services.AddSingleton(_ => configProvider);
 
 		var torSetting = new TorSettings(dataDir, wasabiInstallationFolderPath: EnvironmentHelpers.GetFullBaseDirectory(),
 			true, TorMode.Enabled, 37155, 37156);
