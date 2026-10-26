@@ -44,7 +44,7 @@ public class WabiSabiConfigProvider
 		}
 		else
 		{
-			var newConfig = WabiSabiConfig.TryLoadFile(_config.FilePath, out var newSourceJson);
+			var newConfig = WabiSabiConfig.TryLoadFile(_path, out var newSourceJson);
 			if (newConfig is null)
 			{
 				// Return existing config instead.
