@@ -66,6 +66,7 @@ public class Round
 	public TimeFrame ConnectionConfirmationTimeFrame { get; private set; }
 	public TimeFrame OutputRegistrationTimeFrame { get; set; }
 	public TimeFrame TransactionSigningTimeFrame { get; set; }
+	public DateTimeOffset? InputRegistrationEnd { get; private set; }
 	public DateTimeOffset End { get; private set; }
 	public EndRoundState EndRoundState { get; set; }
 	public int RemainingInputVsizeAllocation => Parameters.MaxTransactionSize - MultipartyTransactionParameters.SharedOverhead - (InputCount * Parameters.MaxVsizeAllocationPerAlice);
@@ -93,6 +94,12 @@ public class Round
 		}
 
 		Logger.LogInfo(FormatLog($"Phase changed: {Phase} -> {phase}", this));
+
+		if (Phase == Phase.InputRegistration && phase != Phase.InputRegistration)
+		{
+			InputRegistrationEnd = DateTimeOffset.UtcNow;
+		}
+
 		Phase = phase;
 
 		if (phase == Phase.ConnectionConfirmation)
